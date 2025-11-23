@@ -1,5 +1,5 @@
 
-cd /Users/xuxinliang/Desktop/music_practice/music_explorer
+cd /Users/xuxinliang/Desktop/music_practice/music_explorer/music/music
 
 # ===== 新增 Docker 服务检查 =====
 if ! docker info >/dev/null 2>&1; then

@@ -317,7 +317,7 @@
         .scale-display {
             display: flex;
             justify-content: center;
-            height: 220px;
+            height: 200px;
             position: relative;
         }
 
@@ -609,6 +609,30 @@
             color: #fff;
         }
 
+        /* 添加按钮样式 */
+        .interval-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .interval-button {
+            padding: 8px 15px;
+            border-radius: 20px;
+            border: none;
+            background: linear-gradient(to right, #1e88e5, #0d47a1);
+            color: white;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .interval-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
         /* 响应式调整 */
         @media (max-width: 768px) {
             .control-panel {
@@ -862,6 +886,10 @@
                 <!-- 新增：训练音程范围 -->
                 <div class="interval-group">
                     <div class="interval-title">训练的音程范围</div>
+                    <div class="interval-buttons">
+                        <button id="selectAllIntervals" class="interval-button">全选</button>
+                        <button id="deselectAllIntervals" class="interval-button">全不选</button>
+                    </div>
                     <div class="interval-grid" id="intervalGrid">
                         <!-- 音程范围选项将通过JS动态生成 -->
                     </div>
@@ -886,6 +914,11 @@
             <button id="modalBtn" class="modal-btn">确定</button>
         </div>
     </div>
+
+    <footer>
+        <p>助你提升音感 | 徐新亮的在线音乐工具</p>
+    </footer>
+
     <script>
         // 初始化Tone.js - 使用本地下载的音源
         const sampler = new Tone.Sampler({
@@ -903,7 +936,7 @@
                 "C6": "C6.mp3",
                 "A6": "A6.mp3"
             },
-            baseUrl: "sounds/",
+            baseUrl: "./",
             onload: () => {
                 console.log("本地钢琴音源加载完成");
                 createBaseNoteOptions();
@@ -1025,8 +1058,9 @@
             { id: "P8", name: "纯八度", semitones: 12 }
         ];
 
-        // 存储用户选择的音程范围
+        // 存储用户选择的音程范围 - 初始为全选
         let selectedIntervals = new Set(intervalOptions.map(opt => opt.id));
+
 
         // 初始化函数
         function init() {
@@ -1037,6 +1071,9 @@
             setupSettingsPanel();
             setupModal();
             setupReplayButton();
+            createIntervalOptions(); // 创建音程范围选项
+            validateIntervalSettings(); // 初始验证
+            setupIntervalButtons(); // 设置音程范围按钮
         }
 
         // 创建音程范围选项
@@ -1051,7 +1088,7 @@
                 checkbox.type = 'checkbox';
                 checkbox.id = `interval-${interval.id}`;
                 checkbox.value = interval.id;
-                checkbox.checked = true;
+                checkbox.checked = true; // 初始选中
                 checkbox.addEventListener('change', handleIntervalChange);
 
                 const label = document.createElement('label');
@@ -1074,11 +1111,62 @@
                 selectedIntervals.delete(intervalId);
             }
 
-            // 如果用户取消了所有选项，自动选择纯八度
+            // 验证设置并更新按钮状态
+            validateIntervalSettings();
+        }
+
+        // 验证音程设置并更新按钮状态
+        function validateIntervalSettings() {
+            const isValid = isIntervalSettingsValid();
+
+            // 更新按钮状态
+            randomTrainingBtn.disabled = !isValid;
+            replayTestNoteBtn.disabled = !isValid;
+
+            return isValid;
+        }
+
+        // 检查音程设置是否有效
+        function isIntervalSettingsValid() {
+            // 1. 检查是否至少选择了一个音程
             if (selectedIntervals.size === 0) {
-                selectedIntervals.add('P8');
-                document.getElementById('interval-P8').checked = true;
+                showModal("设置错误", "请至少选择一个音程范围，否则无法生成训练音");
+                return false;
             }
+
+            // 2. 检查是否能生成训练音
+            if (!canGenerateTrainingNotes()) {
+                showModal("设置错误", "当前选择的音程范围不属于当前音阶类型的音程范围，这将导致无法生成训练音，请调整设置");
+                return false;
+            }
+
+            return true;
+        }
+
+        // 检查是否能生成训练音
+        function canGenerateTrainingNotes() {
+            // 获取当前音阶类型和方向所包含的音程（半音数）集合
+            const scaleIntervalSet = getScaleIntervals(scaleType, scaleDirection.value);
+
+            // 获取用户选择的音程范围对应的半音数集合
+            const selectedSemitones = new Set();
+            for (const intervalId of selectedIntervals) {
+                const interval = intervalOptions.find(opt => opt.id === intervalId);
+                if (interval) {
+                    selectedSemitones.add(interval.semitones);
+                }
+            }
+
+            // 取交集：当前音阶中存在的且用户选择的音程
+            const allowedSemitones = new Set();
+            for (const semitone of scaleIntervalSet) {
+                if (selectedSemitones.has(semitone)) {
+                    allowedSemitones.add(semitone);
+                }
+            }
+
+            // 检查是否有符合条件的音程
+            return allowedSemitones.size > 0;
         }
 
         // 设置再听一遍按钮
@@ -1218,12 +1306,16 @@
         function setupSettingsPanel() {
             toggleSettingsBtn.addEventListener('click', function (e) {
                 e.stopPropagation(); // 阻止事件冒泡
-                settingsPanel.classList.toggle('expanded');
-                toggleSettingsBtn.textContent = settingsPanel.classList.contains('expanded')
-                    ? '收起设置' : '设置面板';
+                const isExpanded = settingsPanel.classList.toggle('expanded');
+                toggleSettingsBtn.textContent = isExpanded ? '收起设置' : '设置面板';
 
-                // 新增代码：当面板收起时刷新页面并更新设置
-                if (!settingsPanel.classList.contains('expanded')) {
+                // 根据面板状态启用/禁用按钮
+                playScaleBtn.disabled = isExpanded;
+                randomTrainingBtn.disabled = isExpanded;
+                replayTestNoteBtn.disabled = isExpanded;
+
+                // 当面板收起时刷新页面并更新设置
+                if (!isExpanded) {
                     setTimeout(() => {
                         // 重置训练状态
                         resetTrainingState();
@@ -1747,6 +1839,11 @@
                 return;
             }
 
+            // 验证音程设置
+            if (!validateIntervalSettings()) {
+                return;
+            }
+
             playScaleBtn.disabled = true;
             randomTrainingBtn.disabled = true;
             replayTestNoteBtn.style.display = 'none';
@@ -1859,35 +1956,66 @@
                 }
 
                 // 随机选择一个音符（包括第一个和最后一个）
-                // 根据用户选择的音程范围过滤可能的音符
-                const possibleNotes = [];
+                // 获取当前音阶类型和方向所包含的音程（半音数）集合
+                const scaleIntervalSet = getScaleIntervals(scaleType, scaleDirection.value);
 
-                // 考虑基准音上下一个八度范围内的所有音符
-                const baseOctave = parseInt(baseNote.match(/\d+/)[0]);
-                const baseNoteName = baseNote.replace(/\d+/, '');
-                const baseIndex = notes.indexOf(baseNoteName);
-
-                // 检查上下各一个八度范围内的音符
-                for (let octave = baseOctave - 1; octave <= baseOctave + 1; octave++) {
-                    for (let i = 0; i < notes.length; i++) {
-                        const note = notes[i] + octave;
-                        const semitones = getSemitonesBetween(baseNote, note);
-                        const intervalId = getIntervalId(semitones);
-
-                        if (intervalId && selectedIntervals.has(intervalId)) {
-                            possibleNotes.push(note);
-                        }
+                // 获取用户选择的音程范围对应的半音数集合
+                const selectedSemitones = new Set();
+                for (const intervalId of selectedIntervals) {
+                    const interval = intervalOptions.find(opt => opt.id === intervalId);
+                    if (interval) {
+                        selectedSemitones.add(interval.semitones);
                     }
                 }
 
-                // 如果没有符合条件的音符，使用默认的纯八度
-                if (possibleNotes.length === 0) {
-                    possibleNotes.push(baseNote.replace(/\d+/, '') + (baseOctave + 1));
+                // 取交集：当前音阶中存在的且用户选择的音程
+                const allowedSemitones = new Set();
+                for (const semitone of scaleIntervalSet) {
+                    if (selectedSemitones.has(semitone)) {
+                        allowedSemitones.add(semitone);
+                    }
+                }
+
+                // 如果没有符合条件的音程，使用纯八度（12）作为默认
+                if (allowedSemitones.size === 0) {
+                    allowedSemitones.add(12);
+                }
+
+                // 生成可能的音符（根据方向限制）
+                const possibleNotes = [];
+                const baseNoteName = baseNote.replace(/\d+/, ''); // 提取基准音的音名（如"A"）
+                const baseOctave = parseInt(baseNote.match(/\d+/)[0]); // 提取基准音的八度（如3）
+                const basePosition = getNotePosition(baseNote); // 基准音的绝对位置
+
+                for (let octave = baseOctave - 1; octave <= baseOctave + 1; octave++) {
+                    for (let i = 0; i < notes.length; i++) {
+                        const note = notes[i] + octave;
+                        const notePosition = getNotePosition(note);
+                        const semitones = Math.abs(notePosition - basePosition);
+
+                        // 检查音程是否在允许范围内
+                        if (allowedSemitones.has(semitones)) {
+                            // 根据方向筛选音符
+                            if (direction === 'ascending' && notePosition >= basePosition) {
+                                possibleNotes.push(note);
+                            } else if (direction === 'descending' && notePosition <= basePosition) {
+                                possibleNotes.push(note);
+                            }
+                        }
+                    }
                 }
 
                 // 随机选择一个音符
                 const randomIndex = Math.floor(Math.random() * possibleNotes.length);
                 currentTestNote = possibleNotes[randomIndex];
+                console.log("--- 随机训练信息 ---");
+                console.log(`基准音: ${baseNote}`);
+                console.log(`训练音: ${currentTestNote}`);
+                const semitones = getSemitonesBetween(baseNote, currentTestNote);
+                const intervalId = getIntervalId(semitones);
+                const intervalName = intervalOptions.find(opt => opt.id === intervalId)?.name || "未知音程";
+                console.log(`音程: ${intervalName} (${semitones}个半音)`);
+                console.log("-------------------");
 
                 // 播放测试音符（不显示高亮）
                 if (isDualNoteTraining) {
@@ -2051,6 +2179,70 @@
             });
         }
 
+        // 根据音阶类型和方向获取该音阶包含的音程（半音数）集合
+        function getScaleIntervals(scaleType, direction) {
+            const intervals = new Set();
+
+            if (scaleType === 'major') {
+                if (direction === 'ascending') {
+                    [0, 2, 4, 5, 7, 9, 11, 12].forEach(i => intervals.add(i));
+                } else {
+                    [0, 1, 3, 5, 7, 8, 10, 12].forEach(i => intervals.add(i));
+                }
+            } else if (scaleType === 'minor') {
+                if (direction === 'ascending') {
+                    [0, 2, 3, 5, 7, 8, 10, 12].forEach(i => intervals.add(i));
+                } else {
+                    [0, 2, 4, 5, 7, 9, 10, 12].forEach(i => intervals.add(i));
+                }
+            } else if (scaleType === 'chromatic') {
+                // 半音阶包含0到12的所有半音
+                for (let i = 0; i <= 12; i++) {
+                    intervals.add(i);
+                }
+            }
+
+            return intervals;
+        }
+
+        // 设置音程范围按钮功能
+        function setupIntervalButtons() {
+            const selectAllBtn = document.getElementById('selectAllIntervals');
+            const deselectAllBtn = document.getElementById('deselectAllIntervals');
+
+            selectAllBtn.addEventListener('click', function () {
+                // 选中所有复选框
+                document.querySelectorAll('.interval-item input[type="checkbox"]').forEach(checkbox => {
+                    checkbox.checked = true;
+                    // 更新selectedIntervals集合
+                    selectedIntervals.add(checkbox.value);
+                });
+                validateIntervalSettings();
+            });
+
+            deselectAllBtn.addEventListener('click', function () {
+                // 取消选中所有复选框
+                document.querySelectorAll('.interval-item input[type="checkbox"]').forEach(checkbox => {
+                    checkbox.checked = false;
+                    // 更新selectedIntervals集合
+                    selectedIntervals.delete(checkbox.value);
+                });
+
+                // 自动选择纯一度（P1）
+                const p1Checkbox = document.querySelector('input[value="P1"]');
+                if (p1Checkbox) {
+                    p1Checkbox.checked = true;
+                    selectedIntervals.add("P1");
+                }
+
+                // 显示提示
+                showModal("提示", "已自动选择纯一度，因为至少需要一个音程范围");
+
+                validateIntervalSettings();
+            });
+        }
+
+
         // 事件监听
         playScaleBtn.addEventListener('click', playScale);
         randomTrainingBtn.addEventListener('click', startTraining);
@@ -2081,20 +2273,32 @@
         // 初始化应用
         init();
 
+        // 修改全局点击事件监听器
         document.addEventListener('DOMContentLoaded', function () {
             document.addEventListener('click', function (event) {
                 const settingsPanel = document.getElementById('settingsPanel');
                 const toggleBtn = document.getElementById('toggleSettingsBtn');
+                const resultModal = document.getElementById('resultModal');
 
                 if (!settingsPanel || !toggleBtn) return;
 
-                // 检查点击是否发生在设置面板或切换按钮上
-                const isClickInside = settingsPanel.contains(event.target) ||
+                // 检查点击是否发生在设置面板、切换按钮或模态框上
+                const isClickInsideSettings = settingsPanel.contains(event.target) ||
                     toggleBtn === event.target ||
                     toggleBtn.contains(event.target);
 
-                // 如果点击发生在外部且面板是展开的，则收起面板
-                if (!isClickInside && settingsPanel.classList.contains('expanded')) {
+                const isClickInsideModal = resultModal.contains(event.target);
+
+                // 如果点击发生在外部且面板是展开的，并且点击的不是模态框内容，则尝试收起面板
+                if (!isClickInsideSettings && !isClickInsideModal && settingsPanel.classList.contains('expanded')) {
+                    // 首先验证音程设置
+                    if (!validateIntervalSettings()) {
+                        // 如果设置无效，阻止收起面板并显示错误提示
+                        showModal("设置错误", "请至少选择一个有效的音程范围");
+                        return; // 阻止收起面板
+                    }
+
+                    // 设置有效，收起面板
                     settingsPanel.classList.remove('expanded');
                     toggleBtn.textContent = '设置面板';
 
@@ -2110,6 +2314,7 @@
                 }
             });
         });
+
     </script>
 
 </body>

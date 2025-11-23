@@ -72,6 +72,10 @@ let playbackStartTime = 0;
 let playbackInterval = null;
 let currentPlaybackSequence = [];
 
+// 触摸事件控制变量
+let touchStartTime = 0;
+let isTouchMoving = false;
+
 // 进度条元素
 const progressBar = document.getElementById('progressBar');
 const progressFill = document.getElementById('progressFill');
@@ -191,49 +195,64 @@ function createPiano() {
             key.appendChild(label);
 
             // 鼠标按下事件 - 立即发声并持续
-            key.addEventListener('mousedown', async () => {
+            key.addEventListener('mousedown', async (e) => {
+                e.preventDefault();
                 await handleKeyPress(fullNote, key);
             });
 
             // 鼠标抬起事件 - 停止发声
-            key.addEventListener('mouseup', () => {
+            key.addEventListener('mouseup', (e) => {
+                e.preventDefault();
                 handleKeyRelease(fullNote, key);
             });
 
             // 鼠标离开事件 - 停止发声
-            key.addEventListener('mouseleave', () => {
-                handleKeyRelease(fullNote, key);
-            });
-
-            // 触摸事件支持
-            key.addEventListener('touchstart', async (e) => {
-                e.preventDefault();
-                await handleKeyPress(fullNote, key);
-            });
-
-            key.addEventListener('touchend', (e) => {
-                e.preventDefault();
-                handleKeyRelease(fullNote, key);
-            });
-
-            key.addEventListener('touchcancel', (e) => {
+            key.addEventListener('mouseleave', (e) => {
                 e.preventDefault();
                 handleKeyRelease(fullNote, key);
             });
 
             // 点击事件 - 选择音符（不播放声音）
-            key.addEventListener('click', () => {
-                // 更新选择
-                if (!selectedNotes.includes(fullNote)) {
-                    if (selectedNotes.length < noteCount) {
-                        selectedNotes.push(fullNote);
-                        updateSelectedNotesDisplay();
-                        highlightSelectedKeys();
-                        checkAllValidations(); // 实时验证
-                    } else {
-                        MessageUtils.showWarning(`已达到最大选择数量 (${noteCount})`);
+            key.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleNoteSelection(fullNote);
+            });
+
+            // 触摸事件支持 - 改进移动端处理
+            key.addEventListener('touchstart', async (e) => {
+                e.preventDefault();
+                touchStartTime = Date.now();
+                isTouchMoving = false;
+                
+                // 延迟处理，区分点击和滑动
+                setTimeout(() => {
+                    if (!isTouchMoving && Date.now() - touchStartTime < 300) {
+                        handleNoteSelection(fullNote);
                     }
+                }, 100);
+                
+                await handleKeyPress(fullNote, key);
+            });
+
+            key.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                isTouchMoving = true;
+            });
+
+            key.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                handleKeyRelease(fullNote, key);
+                
+                // 如果是短按且没有移动，则选择音符
+                if (!isTouchMoving && Date.now() - touchStartTime < 300) {
+                    handleNoteSelection(fullNote);
                 }
+            });
+
+            key.addEventListener('touchcancel', (e) => {
+                e.preventDefault();
+                handleKeyRelease(fullNote, key);
             });
 
             piano.appendChild(key);
@@ -242,6 +261,21 @@ function createPiano() {
 
     highlightSelectedKeys();
     updateSelectedNotesDisplay();
+}
+
+// 处理音符选择
+function handleNoteSelection(fullNote) {
+    // 更新选择
+    if (!selectedNotes.includes(fullNote)) {
+        if (selectedNotes.length < noteCount) {
+            selectedNotes.push(fullNote);
+            updateSelectedNotesDisplay();
+            highlightSelectedKeys();
+            checkAllValidations(); // 实时验证
+        } else {
+            MessageUtils.showWarning(`已达到最大选择数量 (${noteCount})`);
+        }
+    }
 }
 
 // 处理琴键按下
