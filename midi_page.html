@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MIDI文件解析器</title>
+    <link rel="stylesheet" href="css/midi-info.css">
+</head>
+
+<body>
+    <div class="container">
+        <h1>MIDI 文件解析器</h1>
+
+        <div class="description">
+            上传MIDI文件，解析其详细信息，包括文件名、文件大小、节拍信息、音轨名称、总时长以及所有音符信息。
+            <br>所有解析过程均在本地完成，无需网络连接。
+        </div>
+
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">🎵</div>
+            <h3>点击或拖拽MIDI文件到这里</h3>
+            <p>支持标准MIDI文件(.mid, .midi)</p>
+            <input type="file" id="fileInput" class="file-input" accept=".mid,.midi">
+            <button class="btn" id="browseBtn">选择文件</button>
+            <div class="file-info" id="fileInfo"></div>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>正在解析MIDI文件...</p>
+        </div>
+
+        <div class="error" id="error"></div>
+
+        <div class="results" id="results">
+            <div class="control-panel" id="controlPanel">
+                <button class="btn" id="showAllBtn">显示所有音轨</button>
+                <button class="btn btn-secondary" id="showPianoBtn">只展示钢琴音轨</button>
+                <button class="btn btn-piano" id="playPianoBtn">使用钢琴播放</button>
+            </div>
+
+            <div class="filter-info" id="filterInfo">
+                当前显示: <strong id="filterStatus">所有音轨</strong>
+            </div>
+
+            <div class="section">
+                <h2 class="section-title">文件基本信息</h2>
+                <div id="basicInfo"></div>
+            </div>
+
+            <div class="section">
+                <h2 class="section-title">音轨信息</h2>
+                <div id="trackInfo"></div>
+            </div>
+
+            <div class="section">
+                <h2 class="section-title">音符信息</h2>
+                <div id="noteInfo"></div>
+            </div>
+
+            <div class="section" id="pianoSection" style="display: none;">
+                <h2 class="section-title">钢琴播放</h2>
+                <div class="track-selection" id="trackSelection"></div>
+                <div class="piano-controls">
+                    <button class="btn" id="playBtn">播放</button>
+                    <button class="btn btn-secondary" id="pauseBtn">暂停</button>
+                    <button class="btn btn-secondary" id="stopBtn">停止</button>
+                </div>
+                <div class="playback-info" id="playbackInfo">
+                    准备播放...
+                </div>
+                <div class="piano-container">
+                    <div class="piano-keyboard-container">
+                        <div class="piano-keyboard" id="pianoKeyboard"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            MIDI解析器 | 完全本地运行 | 无需网络连接
+        </div>
+    </div>
+
+    <!-- 全屏钢琴容器 -->
+    <div id="fullscreenPiano" class="fullscreen-piano">
+        <div class="fullscreen-piano-header">
+            <button id="collapsePiano" class="collapse-btn">收起</button>
+        </div>
+        <div class="fullscreen-piano-content">
+            <div class="fullscreen-track-selection" id="fullscreenTrackSelection"></div>
+            <div class="fullscreen-piano-controls">
+                <button class="btn" id="fullscreenPlayBtn">播放</button>
+                <button class="btn btn-secondary" id="fullscreenPauseBtn">暂停</button>
+                <button class="btn btn-secondary" id="fullscreenStopBtn">停止</button>
+            </div>
+            <div class="fullscreen-playback-info" id="fullscreenPlaybackInfo">
+                准备播放...
+            </div>
+            <div class="fullscreen-piano-container">
+                <div class="fullscreen-piano-keyboard-container">
+                    <div class="fullscreen-piano-keyboard" id="fullscreenPianoKeyboard"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 引入Tone.js库 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <script src="js/pure-piano.js"></script>
+    <script src="js/midi-info.js"></script>
+    <script src="js/midi-piano-play.js"></script>
+
+</body>
+
+</html>

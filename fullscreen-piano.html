@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>全屏钢琴</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+            color: #fff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            text-align: center;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 2.5rem;
+            text-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+        }
+
+        .description {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 1.1rem;
+            line-height: 1.6;
+            color: #e0e0e0;
+        }
+
+        .btn {
+            background: linear-gradient(to right, #4a90e2, #5d3fd3);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 50px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            margin: 5px;
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn:active {
+            transform: translateY(1px);
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        /* 全屏钢琴样式 */
+        .fullscreen-piano {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+            z-index: 1000;
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .fullscreen-piano.active {
+            display: flex;
+        }
+
+        .fullscreen-piano-header {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 1001;
+        }
+
+        .collapse-btn {
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            padding: 12px 20px;
+            border-radius: 25px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+            backdrop-filter: blur(10px);
+        }
+
+        .collapse-btn:hover {
+            background: rgba(0, 0, 0, 0.9);
+            border-color: rgba(255, 255, 255, 0.8);
+            transform: scale(1.05);
+        }
+
+        .fullscreen-piano-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            padding-top: 80px;
+        }
+
+        .fullscreen-playback-info {
+            text-align: center;
+            margin: 10px 0;
+            padding: 15px;
+            background: rgba(255, 152, 0, 0.3);
+            border-radius: 10px;
+            font-size: 1.1rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .fullscreen-piano-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            margin-top: 20px;
+        }
+
+        .fullscreen-piano-keyboard-container {
+            width: 100%;
+            max-width: 95vw;
+            overflow-x: auto;
+            text-align: center;
+            padding: 20px 0;
+        }
+
+        .fullscreen-piano-keyboard {
+            display: inline-flex;
+            position: relative;
+            transform-origin: center;
+            transition: transform 0.3s ease;
+        }
+
+        /* 全屏钢琴琴键样式 */
+        .fullscreen-piano-keyboard .key {
+            position: relative;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .fullscreen-piano-keyboard .white.key {
+            background: white;
+            border: 1px solid #ccc;
+            border-radius: 0 0 8px 8px;
+            min-width: 30px;
+            height: 200px;
+            z-index: 1;
+            transition: all 0.1s ease;
+        }
+
+        .fullscreen-piano-keyboard .black.key {
+            background: black;
+            min-width: 18px;
+            height: 120px;
+            z-index: 2;
+            border-radius: 0 0 5px 5px;
+            margin-left: -9px;
+            margin-right: -9px;
+            transition: all 0.1s ease;
+        }
+
+        .fullscreen-piano-keyboard .key-label {
+            position: absolute;
+            bottom: 10px;
+            width: 100%;
+            text-align: center;
+            font-size: 12px;
+            color: #333;
+            font-weight: bold;
+        }
+
+        .fullscreen-piano-keyboard .black.key .key-label {
+            color: white;
+        }
+
+        .fullscreen-piano-keyboard .key.playing {
+            background: linear-gradient(to bottom, #4a90e2, #5d3fd3);
+            transform: scale(0.98);
+        }
+
+        .fullscreen-piano-keyboard .black.key.playing {
+            background: linear-gradient(to bottom, #4a90e2, #5d3fd3);
+        }
+
+        .fullscreen-piano-keyboard .white.key.playing {
+            background: linear-gradient(to bottom, #4a90e2, #5d3fd3);
+            color: white;
+        }
+
+        .fullscreen-piano-keyboard .key.pedal-active {
+            box-shadow: 0 0 10px rgba(100, 255, 100, 1);
+        }
+
+        /* 钢琴雨效果样式 */
+        .piano-rain-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 5;
+            overflow: hidden;
+        }
+
+        .piano-rain {
+            position: absolute;
+            border-radius: 2px;
+            z-index: 5;
+            transition: transform linear;
+            transform: translateY(0);
+        }
+
+        /* 响应式调整 */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .fullscreen-piano-content {
+                padding: 10px;
+                padding-top: 60px;
+            }
+            
+            .fullscreen-piano-keyboard-container {
+                max-width: 100vw;
+                padding: 10px 0;
+            }
+            
+            .fullscreen-piano-keyboard .white.key {
+                min-width: 20px;
+                height: 150px;
+            }
+            
+            .fullscreen-piano-keyboard .black.key {
+                min-width: 12px;
+                height: 90px;
+                margin-left: -6px;
+                margin-right: -6px;
+            }
+            
+            .fullscreen-piano-keyboard .key-label {
+                font-size: 8px;
+                bottom: 5px;
+            }
+            
+            .collapse-btn {
+                padding: 8px 15px;
+                font-size: 0.9rem;
+            }
+        }
+
+        @media (max-height: 600px) {
+            .fullscreen-piano-keyboard .white.key {
+                height: 120px;
+            }
+            
+            .fullscreen-piano-keyboard .black.key {
+                height: 72px;
+            }
+            
+            .fullscreen-piano-content {
+                padding-top: 60px;
+            }
+        }
+
+        /* 确保全屏模式下其他内容被隐藏 */
+        body.fullscreen-mode {
+            overflow: hidden;
+        }
+
+        body.fullscreen-mode .container {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>全屏钢琴</h1>
+        <div class="description">
+            这是一个独立的全屏钢琴页面，包含钢琴雨效果，可以手动弹奏或通过API调用播放功能。
+        </div>
+        <button class="btn" id="showPianoBtn">打开全屏钢琴</button>
+        <div class="footer">
+            全屏钢琴 | 基于 pure-piano.js
+        </div>
+    </div>
+
+    <!-- 全屏钢琴容器 -->
+    <div id="fullscreenPiano" class="fullscreen-piano">
+        <div class="fullscreen-piano-header">
+            <button id="collapsePiano" class="collapse-btn">收起钢琴</button>
+        </div>
+        <div class="fullscreen-piano-content">
+            <div class="fullscreen-playback-info" id="fullscreenPlaybackInfo">
+                准备播放...
+            </div>
+            <div class="fullscreen-piano-container">
+                <div class="fullscreen-piano-keyboard-container">
+                    <div class="fullscreen-piano-keyboard" id="fullscreenPianoKeyboard"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 引入Tone.js库 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <script>
+        // pure-piano.js 简化版
+        const octaveStart = 0; // 从A0开始
+        const octaveEnd = 8;   // 到C8结束
+        const blackKeys = ["C#", "D#", "F#", "G#", "A#"];
+
+        let noteDuration = 0.8;
+
+        // 初始化Tone.js - 使用本地下载的音源
+        const sampler = new Tone.Sampler({
+            urls: {
+                "A0": "A0.mp3",
+                "C1": "C1.mp3",
+                "A1": "A1.mp3",
+                "C2": "C2.mp3",
+                "A2": "A2.mp3",
+                "C3": "C3.mp3",
+                "A3": "A3.mp3",
+                "C4": "C4.mp3",
+                "A4": "A4.mp3",
+                "C5": "C5.mp3",
+                "A5": "A5.mp3",
+                "C6": "C6.mp3",
+                "A6": "A6.mp3",
+                "A7": "A7.mp3",
+                "C7": "C7.mp3",
+                "C8": "C8.mp3"
+            },
+            baseUrl: "./sounds/",
+            onload: () => {
+                console.log("本地钢琴音源加载完成");
+            },
+            onerror: (error) => {
+                console.error("音源加载错误:", error);
+                // 如果本地音源加载失败，使用在线音源作为备用
+                console.log("尝试使用在线音源...");
+                sampler.baseUrl = "https://tonejs.github.io/audio/salamander/";
+            }
+        }).toDestination();
+
+        // 创建钢琴键盘
+        function createPiano(pianoElement) {
+            if (!pianoElement) return;
+            
+            pianoElement.innerHTML = '';
+
+            for (let octave = octaveStart; octave <= octaveEnd; octave++) {
+                let startIndex = 0;
+                let endIndex = 11;
+                
+                if (octave === 0) {
+                    startIndex = 9;
+                    endIndex = 11;
+                } else if (octave === 8) {
+                    startIndex = 0;
+                    endIndex = 0;
+                }
+                
+                const notes = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+                
+                for (let i = startIndex; i <= endIndex; i++) {
+                    const note = notes[i];
+                    const fullNote = note + octave;
+                    const isBlack = blackKeys.includes(note);
+
+                    const key = document.createElement('div');
+                    key.className = `key ${isBlack ? 'black' : 'white'}`;
+                    key.dataset.note = fullNote;
+
+                    const label = document.createElement('div');
+                    label.className = 'key-label';
+                    label.textContent = fullNote;
+                    key.appendChild(label);
+
+                    // 点击琴键事件
+                    key.addEventListener('click', async () => {
+                        try {
+                            if (Tone.context.state !== 'running') {
+                                await Tone.start();
+                            }
+
+                            key.classList.add('playing');
+                            setTimeout(() => key.classList.remove('playing'), 300);
+                            sampler.triggerAttackRelease(fullNote, noteDuration);
+                        } catch (error) {
+                            console.error("播放错误:", error);
+                        }
+                    });
+
+                    // 触摸事件支持
+                    key.addEventListener('touchstart', async (e) => {
+                        e.preventDefault();
+                        try {
+                            if (Tone.context.state !== 'running') {
+                                await Tone.start();
+                            }
+
+                            key.classList.add('playing');
+                            setTimeout(() => key.classList.remove('playing'), 300);
+                            sampler.triggerAttackRelease(fullNote, noteDuration);
+                        } catch (error) {
+                            console.error("播放错误:", error);
+                        }
+                    });
+
+                    pianoElement.appendChild(key);
+                }
+            }
+        }
+
+        // 播放钢琴音符
+        async function playNote(noteName, duration = 0.8, startTime = null) {
+            try {
+                await Tone.start();
+                
+                const now = startTime || Tone.now();
+                sampler.triggerAttackRelease(noteName, duration, now);
+                
+                // 高亮琴键
+                const key = document.querySelector(`.fullscreen-piano-keyboard .key[data-note="${noteName}"]`);
+                if (key) {
+                    key.classList.add('playing');
+                    setTimeout(() => {
+                        key.classList.remove('playing');
+                    }, duration * 1000);
+                }
+                
+            } catch (error) {
+                console.error("播放音符错误:", error);
+            }
+        }
+
+        // 钢琴播放器
+        class PianoPlayer {
+            constructor() {
+                this.isPlaying = false;
+                this.currentTimeIndex = 0;
+                this.playbackSchedule = null;
+                this.scheduledEvents = [];
+                this.pausedTime = 0;
+                this.isPaused = false;
+                this.isFullscreen = false;
+                this.rainContainer = null;
+                this.activeRainElements = [];
+                this.noteBaseDuration = 1;
+                this.noteBaseVelocity = 1;
+                this.rainDefaultSpeed = 3;
+
+                // 钢琴雨颜色映射
+                this.baseNoteColors = {
+                    'C4': 'hsl(0, 80%, 60%)',
+                    'C#4': 'hsl(30, 80%, 60%)',
+                    'D4': 'hsl(60, 80%, 60%)',
+                    'D#4': 'hsl(90, 80%, 60%)',
+                    'E4': 'hsl(120, 80%, 60%)',
+                    'F4': 'hsl(150, 80%, 60%)',
+                    'F#4': 'hsl(180, 80%, 60%)',
+                    'G4': 'hsl(210, 80%, 60%)',
+                    'G#4': 'hsl(240, 80%, 60%)',
+                    'A4': 'hsl(270, 80%, 60%)',
+                    'A#4': 'hsl(300, 80%, 60%)',
+                    'B4': 'hsl(330, 80%, 60%)'
+                };
+
+                this.initUI();
+                this.setupEventListeners();
+            }
+
+            initUI() {
+                this.fullscreenPiano = document.getElementById('fullscreenPiano');
+                this.fullscreenPianoKeyboard = document.getElementById('fullscreenPianoKeyboard');
+                this.fullscreenPlaybackInfo = document.getElementById('fullscreenPlaybackInfo');
+                this.collapseBtn = document.getElementById('collapsePiano');
+
+                this.initPiano();
+                this.createRainContainer();
+            }
+
+            setupEventListeners() {
+                // 主页面按钮
+                document.getElementById('showPianoBtn').addEventListener('click', () => this.showFullscreenPiano());
+                
+                // 收起按钮
+                this.collapseBtn.addEventListener('click', () => this.collapseFullscreen());
+                
+                // 窗口大小改变时重新调整钢琴大小
+                window.addEventListener('resize', () => {
+                    if (this.isFullscreen) {
+                        setTimeout(() => this.adjustPianoSize(), 100);
+                    }
+                });
+            }
+
+            createRainContainer() {
+                this.rainContainer = document.createElement('div');
+                this.rainContainer.className = 'piano-rain-container';
+                this.fullscreenPiano.appendChild(this.rainContainer);
+            }
+
+            initPiano() {
+                createPiano(this.fullscreenPianoKeyboard);
+            }
+
+            showFullscreenPiano() {
+                this.isFullscreen = true;
+                
+                document.body.classList.add('fullscreen-mode');
+                this.fullscreenPiano.classList.add('active');
+                
+                setTimeout(() => {
+                    this.adjustPianoSize();
+                }, 100);
+            }
+
+            collapseFullscreen() {
+                this.isFullscreen = false;
+                document.body.classList.remove('fullscreen-mode');
+                this.fullscreenPiano.classList.remove('active');
+                this.stopPlayback();
+            }
+
+            adjustPianoSize() {
+                if (!this.isFullscreen) return;
+                
+                const keyboard = this.fullscreenPianoKeyboard;
+                const container = keyboard.parentElement;
+                const containerWidth = container.clientWidth;
+                
+                const whiteKeys = keyboard.querySelectorAll('.white.key');
+                if (whiteKeys.length === 0) return;
+                
+                const totalWhiteKeys = whiteKeys.length;
+                const newWhiteKeyWidth = Math.max(20, Math.floor(containerWidth / totalWhiteKeys));
+                
+                whiteKeys.forEach(key => {
+                    key.style.width = `${newWhiteKeyWidth}px`;
+                    key.style.minWidth = `${newWhiteKeyWidth}px`;
+                });
+                
+                const blackKeys = keyboard.querySelectorAll('.black.key');
+                const newBlackKeyWidth = Math.max(12, Math.floor(newWhiteKeyWidth * 0.6));
+                
+                blackKeys.forEach(key => {
+                    key.style.width = `${newBlackKeyWidth}px`;
+                    key.style.minWidth = `${newBlackKeyWidth}px`;
+                    key.style.marginLeft = `-${newBlackKeyWidth / 2}px`;
+                    key.style.marginRight = `-${newBlackKeyWidth / 2}px`;
+                });
+                
+                const keyLabels = keyboard.querySelectorAll('.key-label');
+                const newFontSize = Math.max(8, Math.floor(newWhiteKeyWidth * 0.4));
+                keyLabels.forEach(label => {
+                    label.style.fontSize = `${newFontSize}px`;
+                });
+            }
+
+            // 播放单个音符
+            async playPianoNote(noteName, duration = 0.8, startTime = null, velocity = 1) {
+                try {
+                    let actualDuration = duration * this.noteBaseDuration;
+                    
+                    await playNote(noteName, actualDuration, startTime);
+                    this.highlightKey(noteName, actualDuration);
+                    
+                    // 创建钢琴雨效果
+                    this.createRainEffect(noteName, actualDuration);
+                } catch (error) {
+                    console.error("播放音符错误:", error);
+                }
+            }
+
+            highlightKey(noteName, duration) {
+                if (!this.fullscreenPianoKeyboard) return;
+                
+                const key = this.fullscreenPianoKeyboard.querySelector(`.key[data-note="${noteName}"]`);
+                if (key) {
+                    key.classList.add('playing');
+                    setTimeout(() => {
+                        key.classList.remove('playing');
+                    }, duration * 1000);
+                }
+            }
+
+            // 同时播放多个音符
+            async playNotesSimultaneously(notes, startTime = null) {
+                if (!notes || notes.length === 0) return;
+
+                try {
+                    if (Tone.context.state !== 'running') {
+                        await Tone.start();
+                    }
+
+                    const actualStartTime = startTime || Tone.now() + 0.1;
+                    
+                    const playPromises = notes.map(note => {
+                        let duration = Math.min(note.duration || 0.8, 2);
+                        const velocity = note.velocity || 1;
+                        
+                        this.createRainEffect(note, duration, note);
+                        
+                        return this.playPianoNote(note, duration, actualStartTime, velocity);
+                    });
+                    
+                    await Promise.all(playPromises);
+
+                } catch (error) {
+                    console.error("播放和弦错误:", error);
+                }
+            }
+
+            getNoteColor(noteName) {
+                const match = noteName.match(/([A-Ga-g]#?b?)(\d+)/);
+                if (!match) return 'hsl(0, 80%, 60%)';
+                
+                const pitch = match[1];
+                const octave = parseInt(match[2]);
+                
+                const baseNote = pitch + '4';
+                const baseColor = this.baseNoteColors[baseNote] || 'hsl(0, 80%, 60%)';
+                
+                const hslMatch = baseColor.match(/hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/);
+                if (!hslMatch) return baseColor;
+                
+                const hue = parseInt(hslMatch[1]);
+                const saturation = parseInt(hslMatch[2]);
+                let lightness = parseInt(hslMatch[3]);
+                
+                const octaveDiff = octave - 4;
+                lightness = Math.max(10, Math.min(90, lightness + (octaveDiff * 10)));
+                
+                return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+            }
+
+            createRainEffect(noteName, duration, note) {
+                if (!this.rainContainer || !this.fullscreenPianoKeyboard) return;
+                
+                const key = this.fullscreenPianoKeyboard.querySelector(`.key[data-note="${noteName}"]`);
+                if (!key) return;
+                
+                const keyRect = key.getBoundingClientRect();
+                const containerRect = this.fullscreenPiano.getBoundingClientRect();
+                
+                const rainElement = document.createElement('div');
+                rainElement.className = 'piano-rain';
+                
+                const color = this.getNoteColor(noteName);
+                
+                const minHeight = 20;
+                const maxHeight = 500;
+                const baseHeight = duration * 100 * this.noteBaseDuration;
+                const maxHeightValue = Math.min(maxHeight, Math.max(minHeight, baseHeight));
+                
+                const moveSpeed = this.rainDefaultSpeed * 100;
+                
+                const startTop = keyRect.top - containerRect.top;
+                
+                rainElement.style.cssText = `
+                    position: absolute;
+                    left: ${keyRect.left - containerRect.left}px;
+                    top: ${startTop}px;
+                    width: ${keyRect.width}px;
+                    height: 0;
+                    background: linear-gradient(to top, ${color}, ${color}00);
+                    border-radius: 2px;
+                    z-index: 5;
+                    overflow: hidden;
+                    transform-origin: bottom center;
+                `;
+                
+                this.rainContainer.appendChild(rainElement);
+                
+                const rainData = {
+                    element: rainElement,
+                    note: note,
+                    duration: duration,
+                    startTime: Date.now(),
+                    maxHeight: maxHeightValue,
+                    moveSpeed: moveSpeed,
+                    startTop: startTop,
+                    containerHeight: containerRect.height,
+                    keyRect: keyRect,
+                    containerRect: containerRect,
+                    isGrowing: true,
+                    currentHeight: 0
+                };
+                
+                this.activeRainElements.push(rainData);
+                this.startRainMovement(rainData);
+            }
+
+            startRainMovement(rainData) {
+                const startTime = Date.now();
+                const growDuration = rainData.duration * 1000;
+                
+                const totalMoveDistance = rainData.containerHeight + rainData.maxHeight;
+                const totalMoveTime = (totalMoveDistance / rainData.moveSpeed) * 1000;
+                
+                const animate = () => {
+                    if (!rainData.element.parentNode) return;
+                    
+                    const elapsed = Date.now() - startTime;
+                    
+                    if (elapsed <= growDuration && rainData.isGrowing) {
+                        const growProgress = elapsed / growDuration;
+                        const currentHeight = growProgress * rainData.maxHeight;
+                        
+                        rainData.element.style.height = `${currentHeight}px`;
+                        rainData.element.style.top = `${rainData.startTop - currentHeight}px`;
+                        
+                        rainData.currentHeight = currentHeight;
+                        
+                    } else if (rainData.isGrowing) {
+                        rainData.isGrowing = false;
+                        rainData.growEndTime = Date.now();
+                        rainData.finalHeight = rainData.currentHeight;
+                        rainData.growEndTop = parseFloat(rainData.element.style.top) || rainData.startTop;
+                    }
+                    
+                    if (!rainData.isGrowing) {
+                        const moveElapsed = Date.now() - rainData.growEndTime;
+                        const moveDistance = (moveElapsed / 1000) * rainData.moveSpeed;
+                        
+                        rainData.element.style.top = `${rainData.growEndTop - moveDistance}px`;
+                        rainData.element.style.height = `${rainData.finalHeight}px`;
+                    }
+                    
+                    const currentTop = parseFloat(rainData.element.style.top) || rainData.startTop;
+                    if (currentTop > -rainData.maxHeight && elapsed < (growDuration + totalMoveTime)) {
+                        requestAnimationFrame(animate);
+                    } else {
+                        if (rainData.element.parentNode) {
+                            rainData.element.parentNode.removeChild(rainData.element);
+                        }
+                        const index = this.activeRainElements.indexOf(rainData);
+                        if (index > -1) {
+                            this.activeRainElements.splice(index, 1);
+                        }
+                    }
+                };
+                
+                requestAnimationFrame(animate);
+            }
+            
+            clearRainEffects() {
+                if (this.rainContainer) {
+                    this.rainContainer.innerHTML = '';
+                }
+                this.activeRainElements = [];
+            }
+
+            clearKeyboardHighlights() {
+                if (!this.fullscreenPianoKeyboard) return;
+                const keys = this.fullscreenPianoKeyboard.querySelectorAll('.key.playing');
+                keys.forEach(key => {
+                    key.classList.remove('playing');
+                });
+            }
+
+            // 播放序列（供外部调用）
+            playSequence(sequence, title = "自定义序列") {
+                if (!this.isFullscreen) {
+                    this.showFullscreenPiano();
+                    setTimeout(() => {
+                        this.startPlayback(sequence, title);
+                    }, 500);
+                } else {
+                    this.startPlayback(sequence, title);
+                }
+            }
+
+            startPlayback(sequence, title) {
+                if (this.isPlaying && !this.isPaused) return;
+
+                if (this.isPaused) {
+                    this.resumePlayback();
+                    return;
+                }
+
+                this.isPlaying = true;
+                this.isPaused = false;
+                this.currentTimeIndex = 0;
+                this.pausedTime = 0;
+                
+                if (this.playbackSchedule) {
+                    this.playbackSchedule.stop();
+                    this.playbackSchedule = null;
+                }
+
+                if (this.scheduledEvents.length) {
+                    this.scheduledEvents.forEach(id => Tone.Transport.clear(id));
+                    this.scheduledEvents = [];
+                }
+
+                this.clearRainEffects();
+                this.clearKeyboardHighlights();
+
+                // 按时间分组音符
+                const timeGroups = this.groupNotesByTime(sequence);
+                
+                timeGroups.forEach((group, index) => {
+                    const eventId = Tone.Transport.schedule((time) => {
+                        if (!this.isPlaying) return;
+                        
+                        if (group.notes.length > 1) {
+                            // 播放和弦
+                            this.playNotesSimultaneously(group.notes, time);
+                        } else {
+                            // 播放单音
+                            this.playPianoNote(group.notes[0].note || group.notes[0], 
+                                            group.duration || 0.8, time);
+                        }
+                        
+                        this.currentTimeIndex = index;
+                        this.updatePlaybackInfo(index, timeGroups.length, title);
+                        
+                    }, group.time);
+                    this.scheduledEvents.push(eventId);
+                });
+
+                const totalDuration = sequence[sequence.length - 1].time + 
+                                    (sequence[sequence.length - 1].duration || 0.8) + 0.5;
+                const endEventId = Tone.Transport.schedule(() => {
+                    this.stopPlayback();
+                }, totalDuration);
+                this.scheduledEvents.push(endEventId);
+
+                Tone.Transport.start();
+                this.playbackStartTime = Tone.now();
+                this.updatePlaybackInfo(0, timeGroups.length, title);
+            }
+
+            // 按时间分组音符
+            groupNotesByTime(notes) {
+                if (notes.length === 0) return [];
+
+                const validNotes = notes.filter(note => note && (note.time !== undefined || note.note));
+                if (validNotes.length === 0) return [];
+
+                // 为每个音符添加时间属性（如果不存在）
+                validNotes.forEach((note, index) => {
+                    if (note.time === undefined) {
+                        note.time = index * 0.5; // 默认0.5秒间隔
+                    }
+                });
+
+                // 按时间排序
+                validNotes.sort((a, b) => (a.time || 0) - (b.time || 0));
+
+                const groups = [];
+                let currentGroup = {
+                    time: validNotes[0].time,
+                    notes: [validNotes[0]],
+                    duration: validNotes[0].duration || 0.8
+                };
+
+                for (let i = 1; i < validNotes.length; i++) {
+                    const note = validNotes[i];
+                    if (!note) continue;
+                    
+                    if (Math.abs(note.time - currentGroup.time) < 0.001) {
+                        currentGroup.notes.push(note);
+                        // 取最长的持续时间
+                        if (note.duration && note.duration > currentGroup.duration) {
+                            currentGroup.duration = note.duration;
+                        }
+                    } else {
+                        groups.push(currentGroup);
+                        currentGroup = {
+                            time: note.time,
+                            notes: [note],
+                            duration: note.duration || 0.8
+                        };
+                    }
+                }
+
+                groups.push(currentGroup);
+                return groups;
+            }
+
+            updatePlaybackInfo(currentIndex, totalItems, title) {
+                this.fullscreenPlaybackInfo.textContent = 
+                    `播放中: ${title} (${currentIndex + 1}/${totalItems})`;
+            }
+
+            resumePlayback() {
+                if (!this.isPaused) return;
+
+                this.isPlaying = true;
+                this.isPaused = false;
+                Tone.Transport.start();
+            }
+
+            pausePlayback() {
+                if (Tone.Transport.state === 'started') {
+                    Tone.Transport.pause();
+                    this.isPlaying = false;
+                    this.isPaused = true;
+                    this.pausedTime = Tone.Transport.seconds;
+                    
+                    if (this.scheduledEvents.length) {
+                        this.scheduledEvents.forEach(id => Tone.Transport.clear(id));
+                        this.scheduledEvents = [];
+                    }
+                }
+            }
+
+            stopPlayback() {
+                if (this.playbackSchedule) {
+                    this.playbackSchedule.stop();
+                    this.playbackSchedule = null;
+                }
+                
+                Tone.Transport.stop();
+                Tone.Transport.cancel();
+                
+                if (this.scheduledEvents.length) {
+                    this.scheduledEvents.forEach(id => Tone.Transport.clear(id));
+                    this.scheduledEvents = [];
+                }
+                
+                this.isPlaying = false;
+                this.isPaused = false;
+                this.currentTimeIndex = 0;
+                this.pausedTime = 0;
+                this.clearKeyboardHighlights();
+                this.clearRainEffects();
+                
+                this.fullscreenPlaybackInfo.textContent = `播放已停止`;
+            }
+        }
+
+        // 初始化钢琴播放器
+        document.addEventListener('DOMContentLoaded', function () {
+            window.pianoPlayer = new PianoPlayer();
+            
+            // 示例：如何从外部调用播放功能
+            // window.pianoPlayer.playSequence([
+            //     { note: 'C4', duration: 0.5, time: 0 },
+            //     { note: 'D4', duration: 0.5, time: 0.5 },
+            //     { note: 'E4', duration: 0.5, time: 1.0 },
+            //     { note: 'F4', duration: 0.5, time: 1.5 },
+            //     { note: 'G4', duration: 0.5, time: 2.0 },
+            //     { note: 'A4', duration: 0.5, time: 2.5 },
+            //     { note: 'B4', duration: 0.5, time: 3.0 },
+            //     { note: 'C5', duration: 1, time: 3.5 }
+            // ], "示例音阶");
+        });
+    </script>
+</body>
+</html>

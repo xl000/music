@@ -1,0 +1,15 @@
+version: '3.8'
+services:
+  web:
+    build: .
+    image: piano-trainer
+    ports:
+      - "8080:80"
+    volumes:
+      - ./sounds:/usr/share/nginx/html/sounds
+    # ===== 新增健康检查 =====
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 3

@@ -1,0 +1,144 @@
+/* 钢琴键盘样式 */
+.piano-container {
+    position: relative;
+    height: 160px;
+    margin: 20px 0;
+    overflow-x: auto;
+    padding-bottom: 15px;
+    border-radius: 15px;
+    box-shadow: inset 0 0 15px rgba(128, 222, 234, 0.3);
+    -webkit-overflow-scrolling: touch;
+    min-width: 100%;
+}
+
+.piano {
+    position: relative;
+    display: inline-flex;
+    height: 150px;
+    min-width: calc(52 * 32px + 36 * 10px);
+    margin: 8px auto;
+}
+
+.key {
+    position: relative;
+    cursor: pointer;
+    border-radius: 0 0 6px 6px;
+    transition: all 0.2s;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+    touch-action: manipulation;
+}
+
+.white {
+    width: 32px;
+    height: 150px;
+    background: linear-gradient(to bottom, #fff 0%, #f5f5f5 100%);
+    border: 1px solid #e0e0e0;
+    z-index: 1;
+}
+
+.white:hover {
+    background: linear-gradient(to bottom, #f0f0f0 0%, #e5e5e5 100%);
+}
+
+.black {
+    width: 20px;
+    height: 90px;
+    background: linear-gradient(to bottom, #455a64 0%, #37474f 100%);
+    margin: 0 -10px;
+    z-index: 2;
+}
+
+.black:hover {
+    background: linear-gradient(to bottom, #546e7a 0%, #455a64 100%);
+}
+
+.selected {
+    box-shadow: 0 0 12px rgba(255, 183, 77, 0.6);
+}
+
+.playing {
+    background: linear-gradient(to bottom, #64b5f6, #2196f3) !important;
+}
+
+.selected.white {
+    background: linear-gradient(to bottom, #fff9c4 0%, #fff176 100%);
+}
+
+.selected.black {
+    background: linear-gradient(to bottom, #ffd54f 0%, #ffb300 100%);
+}
+
+.key-label {
+    position: absolute;
+    bottom: 8px;
+    width: 100%;
+    text-align: center;
+    font-size: 0.65rem;
+    font-weight: bold;
+    color: #455a64;
+}
+
+.black .key-label {
+    color: #fff;
+    bottom: 6px;
+}
+
+.selected .key-label {
+    color: #e65100;
+    font-weight: bold;
+}
+
+.key-label.hidden {
+    display: none;
+}
+
+.position-indicator {
+    position: absolute;
+    top: 8px;
+    left: 0;
+    width: 100%;
+    text-align: center;
+    font-size: 0.95rem;
+    font-weight: bold;
+    color: #e65100;
+    text-shadow: 0 0 3px #fff;
+}
+
+/* 主题相关的钢琴样式 */
+body.default-theme .piano-container {
+    background: rgba(255, 255, 255, 0.7);
+}
+
+body.pink-theme .piano-container {
+    background: rgba(255, 255, 255, 0.75);
+}
+
+/* 确保隐藏模式下的播放效果被完全隐藏 */
+body.hide-mode .key.playing {
+    background: inherit !important;
+    box-shadow: none !important;
+    transform: none !important;
+    transition: none !important;
+}
+
+body.hide-mode .key.playing::after {
+    display: none !important;
+}
+
+/* 分别处理白色和黑色键的隐藏模式样式 */
+body.hide-mode .key.playing.white {
+    background: linear-gradient(to bottom, #fff 0%, #f5f5f5 100%) !important;
+}
+
+body.hide-mode .key.playing.black {
+    background: linear-gradient(to bottom, #455a64 0%, #37474f 100%) !important;
+}
+
+/* 确保选中状态在隐藏模式下保持可见 */
+body.hide-mode .key.selected.white {
+    background: linear-gradient(to bottom, #fff9c4 0%, #fff176 100%) !important;
+}
+
+body.hide-mode .key.selected.black {
+    background: linear-gradient(to bottom, #ffd54f 0%, #ffb300 100%) !important;
+}

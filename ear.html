@@ -1,0 +1,163 @@
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>音感训练器</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+
+    <!-- CSS文件 -->
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/auto-device.css">
+    <link rel="stylesheet" href="css/piano.css">
+</head>
+
+<body class="default-theme">
+    <div class="container">
+        <header>
+            <div class="theme-switcher">
+                <button id="themeToggle">切换主题</button>
+            </div>
+            <h1>音感训练器</h1>
+            <p class="subtitle">选择音符数量，创建自定义训练序列</p>
+        </header>
+
+        <div class="status-message" id="statusMessage">正在加载音源...</div>
+
+        <div class="controls-container">
+            <!-- 主控制项区域 - 多列布局 -->
+            <div class="main-controls">
+                <!-- 第一行 -->
+                <div class="control-row">
+                    <div class="control-group">
+                        <label class="control-label" for="noteCount">音符数量</label>
+                        <input type="number" id="noteCount" min="1" value="3">
+                        <div class="error-message" id="noteCountError"></div>
+                    </div>
+
+                    <div class="control-group">
+                        <label class="control-label" for="randomMode">随机方式</label>
+                        <select id="randomMode">
+                            <option value="nonRepeat">不允许重复音</option>
+                            <option value="allowRepeat">允许重复音</option>
+                        </select>
+                    </div>
+
+                    <div class="control-group">
+                        <label class="control-label" for="randomSolfegeCount">随机唱名数量</label>
+                        <input type="number" id="randomSolfegeCount" min="1" value="3">
+                        <div class="error-message" id="randomSolfegeCountError"></div>
+                    </div>
+                </div>
+
+                <!-- 第二行 -->
+                <div class="control-row">
+                    <div class="control-group">
+                        <label class="control-label" for="noteType">音符类型</label>
+                        <select id="noteType">
+                            <option value="fixedDurationFixedVelocity">时值固定+力度固定</option>
+                            <option value="randomDurationFixedVelocity">时值随机+力度固定</option>
+                            <option value="fixedDurationRandomVelocity">时值固定+力度随机</option>
+                            <option value="randomDurationRandomVelocity">时值随机+力度随机</option>
+                        </select>
+                    </div>
+
+                    <div class="control-group">
+                        <label class="control-label" for="noteDuration">音符时值（秒）</label>
+                        <input type="number" id="noteDuration" min="0" max="4" step="0.1" value="0.5">
+                        <div class="error-message" id="noteDurationError"></div>
+                    </div>
+
+                    <div class="control-group">
+                        <label class="control-label" for="noteVelocity">音符力度</label>
+                        <input type="number" id="noteVelocity" min="0" max="127" value="100">
+                        <div class="error-message" id="noteVelocityError"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 随机范围控制项区域 - 单独一行 -->
+            <div class="random-range-controls">
+                <!-- 新增：时值随机范围旋钮 -->
+                <div class="knob-container">
+                    <div class="knob-label">时值随机范围</div>
+                    <div class="knob" id="durationRandomRangeKnob">
+                        <div class="knob-inner">
+                            <div class="knob-value" id="durationRandomRangeValue">50%</div>
+                            <div class="knob-indicator" id="durationRandomRangeIndicator"></div>
+                        </div>
+                    </div>
+                    <div class="knob-controls">
+                        <div class="knob-btn" id="durationRandomRangeDecrease">-</div>
+                        <div class="knob-btn" id="durationRandomRangeIncrease">+</div>
+                    </div>
+                </div>
+
+                <!-- 新增：力度随机范围旋钮 -->
+                <div class="knob-container">
+                    <div class="knob-label">力度随机范围</div>
+                    <div class="knob" id="velocityRandomRangeKnob">
+                        <div class="knob-inner">
+                            <div class="knob-value" id="velocityRandomRangeValue">50%</div>
+                            <div class="knob-indicator" id="velocityRandomRangeIndicator"></div>
+                        </div>
+                    </div>
+                    <div class="knob-controls">
+                        <div class="knob-btn" id="velocityRandomRangeDecrease">-</div>
+                        <div class="knob-btn" id="velocityRandomRangeIncrease">+</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="solfege-playback-container">
+            <div class="solfege-playback-label">唱名序列点播</div>
+            <div class="solfege-input-group">
+                <input type="text" id="solfegeSequence" class="solfege-sequence-input" placeholder="输入唱名序列，如：do,re,mi">
+                <button id="playbackBtn" class="playback-btn">点播</button>
+            </div>
+            <!-- 新增：进度条 -->
+            <div class="playback-progress-container">
+                <div class="progress-bar" id="progressBar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="progress-time" id="progressTime">0:00 / 0:00</div>
+            </div>
+        </div>
+
+        <div class="selected-notes-container">
+            <div class="selected-notes" id="selectedNotesContainer">
+                <!-- 动态生成的音符显示区域 -->
+            </div>
+        </div>
+
+        <div class="piano-container">
+            <div class="piano" id="piano">
+                <!-- 钢琴键通过JS动态生成 -->
+            </div>
+        </div>
+        <div class="arrow-container">
+            <div class="scroll-arrow left-arrow">‹</div>
+            <div class="scroll-arrow right-arrow">›</div>
+        </div>
+
+        <div class="button-group">
+            <button id="randomBtn" class="random-btn" disabled>随机点播</button>
+            <button id="resetBtn">重置选择</button>
+            <!-- 新增隐藏模式按钮 -->
+            <button id="hideModeToggle" class="hide-mode-btn">开启隐藏</button>
+        </div>
+
+    </div>
+
+    <footer>
+        <p>助你提升音感 | 徐新亮的在线音乐工具</p>
+    </footer>
+
+    <script src="js/utils.js"></script>
+    <script src="js/piano.js"></script>
+    <script src="js/main.js"></script>
+
+</body>
+
+</html>
