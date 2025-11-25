@@ -7,22 +7,14 @@ let isHideMode = false;
 let durationRandomRange = 0.5; // 默认50%
 let velocityRandomRange = 0.5; // 默认50%
 
-// 初始化函数
-async function init() {
-    // 等待音频加载完成
-    if (!isAudioReady()) {
-        // 如果音频还没准备好，等待加载完成
-        await new Promise((resolve) => {
-            const checkAudio = setInterval(() => {
-                if (isAudioReady()) {
-                    clearInterval(checkAudio);
-                    resolve();
-                }
-            }, 100);
-        });
-    }
+// 音频加载完成回调函数
+window.audioLoadingComplete = function() {
+    console.log("音频加载完成，开始初始化主界面");
+    initMainApp();
+};
 
-    // 音频加载完成后继续初始化
+// 主应用初始化函数
+function initMainApp() {
     ThemeManager.init();
 
     // 设置主题切换事件
@@ -85,7 +77,31 @@ async function init() {
     MessageUtils.showStatusMessage("音源加载完成，准备就绪");
 }
 
-// 确保在音频加载完成后再执行初始化
+// 初始化函数 - 检查音频状态
+async function init() {
+    // 如果音频已经加载完成，直接初始化
+    if (isAudioReady()) {
+        console.log("音频已加载完成，直接初始化");
+        initMainApp();
+        return;
+    }
+    
+    // 否则等待音频加载完成
+    console.log("等待音频加载完成...");
+    await new Promise((resolve) => {
+        const checkAudio = setInterval(() => {
+            if (isAudioReady()) {
+                clearInterval(checkAudio);
+                resolve();
+            }
+        }, 100);
+    });
+    
+    // 音频加载完成后初始化
+    initMainApp();
+}
+
+// 确保在DOM加载完成后执行初始化
 document.addEventListener('DOMContentLoaded', function() {
     // 延迟初始化，确保音频加载界面先显示
     setTimeout(init, 100);

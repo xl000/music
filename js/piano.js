@@ -32,6 +32,60 @@ let loadProgress = 0;
 let totalFiles = Object.keys(soundFiles).length;
 let loadedFiles = 0;
 
+// 音频状态管理器
+const AudioStateManager = {
+    setAudioLoaded: function(loaded) {
+        isAudioLoaded = loaded;
+    },
+    
+    setLoadProgress: function(progress) {
+        loadProgress = progress;
+        this.updateProgressDisplay(progress, "正在加载音源...");
+    },
+    
+    showLoadingState: function(message, progress) {
+        this.updateProgressDisplay(progress, message);
+    },
+    
+    updateProgressDisplay: function(percent, message) {
+        const progressBar = document.getElementById('globalProgressBar');
+        const progressText = document.getElementById('progressText');
+        const loadingDetails = document.getElementById('loadingDetails');
+
+        if (progressBar) {
+            progressBar.style.width = percent + '%';
+        }
+        if (progressText) {
+            progressText.textContent = Math.round(percent) + '%';
+        }
+        if (loadingDetails) {
+            loadingDetails.textContent = message;
+        }
+
+        // 当加载完成时显示主界面
+        if (percent >= 100) {
+            setTimeout(() => {
+                document.body.classList.add('loaded');
+                // 确保音频上下文已启动
+                if (Tone.context.state !== 'running') {
+                    Tone.start().then(() => {
+                        console.log("音频上下文已启动");
+                        // 通知主界面初始化
+                        if (window.audioLoadingComplete) {
+                            window.audioLoadingComplete();
+                        }
+                    });
+                } else {
+                    // 直接通知主界面初始化
+                    if (window.audioLoadingComplete) {
+                        window.audioLoadingComplete();
+                    }
+                }
+            }, 500);
+        }
+    }
+};
+
 // 初始化音源加载
 function initAudioLoad() {
     return new Promise((resolve, reject) => {
@@ -82,35 +136,6 @@ function simulateLoadProgress() {
             AudioStateManager.showLoadingState("即将完成...", progress);
         }
     }, 200);
-}
-
-// 更新加载进度
-function updateLoadProgress(percent, message) {
-    loadProgress = Math.min(100, Math.max(0, percent));
-
-    const progressBar = document.getElementById('globalProgressBar');
-    const progressText = document.getElementById('progressText');
-    const loadingDetails = document.getElementById('loadingDetails');
-
-    if (progressBar) {
-        progressBar.style.width = loadProgress + '%';
-    }
-    if (progressText) {
-        progressText.textContent = Math.round(loadProgress) + '%';
-    }
-    if (loadingDetails) {
-        loadingDetails.textContent = message;
-    }
-
-    // 当加载完成时显示主界面
-    if (loadProgress >= 100) {
-        setTimeout(() => {
-            document.body.classList.add('loaded');
-            if (typeof checkAllValidations === 'function') {
-                checkAllValidations();
-            }
-        }, 800);
-    }
 }
 
 // 检查音频是否已加载
@@ -1353,7 +1378,7 @@ document.addEventListener('DOMContentLoaded', function () {
         console.log("音源加载完成");
     }).catch(error => {
         console.error("音源加载失败:", error);
-        updateLoadProgress(0, "音源加载失败，请刷新页面");
+        AudioStateManager.showLoadingState("音源加载失败，请刷新页面", 0);
     });
 });
 
