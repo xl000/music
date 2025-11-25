@@ -276,17 +276,43 @@ function createPiano() {
 
 // 处理音符选择
 function handleNoteSelection(fullNote) {
-    // 更新选择
-    if (!selectedNotes.includes(fullNote)) {
+    // 检查是否已经选中该音符
+    const noteIndex = selectedNotes.indexOf(fullNote);
+    
+    if (noteIndex !== -1) {
+        // 如果已经选中，则取消选择（移除）
+        selectedNotes.splice(noteIndex, 1);
+        
+        // 同时移除对应的唱名标签
+        if (solfegeLabels[noteIndex]) {
+            delete solfegeLabels[noteIndex];
+        }
+        
+        // 重新索引solfegeLabels（可选，保持连续性）
+        const newSolfegeLabels = {};
+        Object.keys(solfegeLabels).forEach((key, index) => {
+            if (parseInt(key) > noteIndex) {
+                newSolfegeLabels[parseInt(key) - 1] = solfegeLabels[key];
+            } else if (parseInt(key) < noteIndex) {
+                newSolfegeLabels[key] = solfegeLabels[key];
+            }
+        });
+        solfegeLabels = newSolfegeLabels;
+        
+    } else {
+        // 如果没有选中，则添加选择
         if (selectedNotes.length < noteCount) {
             selectedNotes.push(fullNote);
-            updateSelectedNotesDisplay();
-            highlightSelectedKeys();
-            checkAllValidations(); // 实时验证
         } else {
             MessageUtils.showWarning(`已达到最大选择数量 (${noteCount})`);
+            return;
         }
     }
+    
+    updateSelectedNotesDisplay();
+    highlightSelectedKeys();
+    generateNoteDisplays(); // 重新生成显示区域以更新唱名输入框
+    checkAllValidations(); // 实时验证
 }
 
 // 处理琴键按下

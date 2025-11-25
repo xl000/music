@@ -56,21 +56,33 @@
     background: linear-gradient(to bottom, #546e7a 0%, #455a64 100%);
 }
 
-/* 选中的琴键样式 - 增强移动端可见性 */
-.selected {
-    box-shadow: 0 0 12px rgba(255, 183, 77, 0.8) !important;
+/* 选中的琴键样式 - 修复高亮覆盖问题 */
+.key.selected {
     transform: translateY(-2px);
     z-index: 3;
+    position: relative;
 }
 
+/* 白键选中样式 - 限制高亮范围，不覆盖黑键 */
 .selected.white {
     background: linear-gradient(to bottom, #fff9c4 0%, #fff176 100%) !important;
     border-color: #ffb300;
+    box-shadow: 0 0 8px rgba(255, 183, 77, 0.6) !important;
+    /* 确保白键高亮不会溢出到黑键区域 */
+    margin: 0;
+    width: 32px;
+    z-index: 3;
 }
 
+/* 黑键选中样式 - 确保高亮效果只在黑键本身 */
 .selected.black {
     background: linear-gradient(to bottom, #ffd54f 0%, #ffb300 100%) !important;
     border-color: #e65100;
+    box-shadow: 0 0 10px rgba(255, 183, 77, 0.8) !important;
+    /* 确保黑键的高亮不会扩展到相邻区域 */
+    margin: 0 -10px !important;
+    width: 20px !important;
+    z-index: 4; /* 黑键的z-index比白键高 */
 }
 
 .playing {
@@ -113,7 +125,14 @@
     color: #e65100;
     text-shadow: 0 0 3px #fff;
     pointer-events: none; /* 防止指示器干扰点击 */
-    z-index: 4;
+    z-index: 5; /* 确保位置指示器在最上层 */
+}
+
+.black .position-indicator {
+    top: 4px;
+    font-size: 0.8rem;
+    color: #fff;
+    text-shadow: 0 0 3px #000;
 }
 
 /* 主题相关的钢琴样式 */
@@ -161,9 +180,14 @@ body.hide-mode .key.selected.black {
         -webkit-tap-highlight-color: transparent;
     }
     
-    .selected {
+    .selected.white {
+        box-shadow: 0 0 6px rgba(255, 183, 77, 0.7) !important;
+    }
+    
+    .selected.black {
         box-shadow: 0 0 8px rgba(255, 183, 77, 0.9) !important;
-        transform: translateY(-1px);
+        margin: 0 -9px !important;
+        width: 18px !important;
     }
     
     /* 增强移动端选中状态的视觉反馈 */
@@ -184,66 +208,33 @@ body.hide-mode .key.selected.black {
     
     .white {
         height: 130px;
+        width: 28px;
     }
     
     .black {
         height: 80px;
+        width: 18px;
+        margin: 0 -9px;
     }
     
-    .selected {
-        box-shadow: 0 0 10px rgba(255, 183, 77, 0.7) !important;
+    .selected.white {
+        width: 28px !important;
     }
-}
-
-/* 改进选中琴键的高亮效果 - 黑键不被覆盖 */
-.key.selected {
-    box-shadow: 0 0 12px rgba(255, 183, 77, 0.8) !important;
-    transform: translateY(-2px);
-    z-index: 3;
-    position: relative;
-}
-
-/* 白键选中样式 */
-.selected.white {
-    background: linear-gradient(to bottom, #fff9c4 0%, #fff176 100%) !important;
-    border-color: #ffb300;
-}
-
-/* 黑键选中样式 - 确保高亮效果只在黑键本身 */
-.selected.black {
-    background: linear-gradient(to bottom, #ffd54f 0%, #ffb300 100%) !important;
-    border-color: #e65100;
-    /* 确保黑键的高亮不会扩展到相邻区域 */
-    margin: 0 -10px !important;
-    width: 20px !important;
-    z-index: 4; /* 黑键的z-index比白键高 */
-}
-
-/* 确保黑键在选中状态下不会被白键覆盖 */
-.piano .black.selected {
-    z-index: 5;
-}
-
-/* 位置指示器样式调整，确保在黑键上正确显示 */
-.black .position-indicator {
-    top: 4px;
-    font-size: 0.8rem;
-    color: #fff;
-    text-shadow: 0 0 3px #000;
-}
-
-/* 移动端优化 */
-@media (max-width: 768px) {
+    
     .selected.black {
-        margin: 0 -9px !important;
         width: 18px !important;
+        margin: 0 -9px !important;
     }
 }
 
 /* 桌面端优化 */
 @media (min-width: 1025px) {
+    .selected.white {
+        width: 32px !important;
+    }
+    
     .selected.black {
-        margin: 0 -14px !important;
-        width: 28px !important;
+        width: 20px !important;
+        margin: 0 -10px !important;
     }
 }
