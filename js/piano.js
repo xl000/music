@@ -5,42 +5,122 @@ const octaveStart = 0; // 从A0开始
 const octaveEnd = 8;   // 到C8结束
 const blackKeys = ["C#", "D#", "F#", "G#", "A#"];
 
-// 初始化Tone.js - 使用本地下载的音源（扩展到A0-A7, C1-C8）
-const sampler = new Tone.Sampler({
-    urls: {
-        "A0": "A0.mp3",
-        "C1": "C1.mp3",
-        "A1": "A1.mp3",
-        "C2": "C2.mp3",
-        "A2": "A2.mp3",
-        "C3": "C3.mp3",
-        "A3": "A3.mp3",
-        "C4": "C4.mp3",
-        "A4": "A4.mp3",
-        "C5": "C5.mp3",
-        "A5": "A5.mp3",
-        "C6": "C6.mp3",
-        "A6": "A6.mp3",
-        "A7": "A7.mp3",
-        "C7": "C7.mp3",
-        "C8": "C8.mp3"
-    },
-    baseUrl: "./sounds/",
-    onload: () => {
-        console.log("本地钢琴音源加载完成");
-        MessageUtils.showSuccess("音源加载完成！");
-        checkAllValidations(); // 直接调用全局验证
-    },
-    onerror: (error) => {
-        console.error("音源加载错误:", error);
-        MessageUtils.showError("音源加载失败，请检查控制台");
+// 音源配置 - 只使用本地音源
+const soundFiles = {
+    "A0": "A0.mp3",
+    "C1": "C1.mp3", 
+    "A1": "A1.mp3",
+    "C2": "C2.mp3",
+    "A2": "A2.mp3", 
+    "C3": "C3.mp3",
+    "A3": "A3.mp3",
+    "C4": "C4.mp3",
+    "A4": "A4.mp3",
+    "C5": "C5.mp3",
+    "A5": "A5.mp3",
+    "C6": "C6.mp3",
+    "A6": "A6.mp3",
+    "A7": "A7.mp3",
+    "C7": "C7.mp3",
+    "C8": "C8.mp3"
+};
 
-        // 如果是CORS错误，显示额外提示
-        if (error.message.includes("Failed to fetch")) {
-            MessageUtils.showError("请使用本地服务器运行（如VS Code的Live Server）！", 0);
+// 全局加载状态
+let sampler = null;
+let isAudioLoaded = false;
+let loadProgress = 0;
+let totalFiles = Object.keys(soundFiles).length;
+let loadedFiles = 0;
+
+// 初始化音源加载
+function initAudioLoad() {
+    return new Promise((resolve, reject) => {
+        // 更新加载状态
+        updateLoadProgress(0, "开始加载音源...");
+        
+        // 创建采样器 - 只使用本地音源
+        sampler = new Tone.Sampler({
+            urls: soundFiles,
+            baseUrl: "./sounds/",
+            onload: () => {
+                loadedFiles = totalFiles;
+                updateLoadProgress(100, "音源加载完成！");
+                isAudioLoaded = true;
+                setTimeout(() => {
+                    resolve(sampler);
+                }, 500);
+            },
+            onerror: (error) => {
+                console.error("音源加载错误:", error);
+                updateLoadProgress(loadProgress, `加载错误: ${error.message}`);
+                reject(error);
+            }
+        }).toDestination();
+        
+        // 模拟加载进度
+        simulateLoadProgress();
+    });
+}
+
+// 模拟加载进度
+function simulateLoadProgress() {
+    let progress = 0;
+    const interval = setInterval(() => {
+        if (isAudioLoaded) {
+            clearInterval(interval);
+            return;
         }
+        
+        progress += Math.random() * 5;
+        if (progress < 90) {
+            updateLoadProgress(progress, `正在加载音源文件... (${Math.round(progress)}%)`);
+        } else if (progress < 99) {
+            updateLoadProgress(progress, "即将完成...");
+        }
+    }, 200);
+}
+
+// 更新加载进度
+function updateLoadProgress(percent, message) {
+    loadProgress = Math.min(100, Math.max(0, percent));
+    
+    const progressBar = document.getElementById('globalProgressBar');
+    const progressText = document.getElementById('progressText');
+    const loadingDetails = document.getElementById('loadingDetails');
+    
+    if (progressBar) {
+        progressBar.style.width = loadProgress + '%';
     }
-}).toDestination();
+    if (progressText) {
+        progressText.textContent = Math.round(loadProgress) + '%';
+    }
+    if (loadingDetails) {
+        loadingDetails.textContent = message;
+    }
+    
+    // 当加载完成时显示主界面
+    if (loadProgress >= 100) {
+        setTimeout(() => {
+            document.body.classList.add('loaded');
+            if (typeof checkAllValidations === 'function') {
+                checkAllValidations();
+            }
+        }, 800);
+    }
+}
+
+// 检查音频是否已加载
+function isAudioReady() {
+    return isAudioLoaded;
+}
+
+// 获取采样器（确保音频已加载）
+function getSampler() {
+    if (!isAudioLoaded) {
+        throw new Error("音频尚未加载完成");
+    }
+    return sampler;
+}
 
 // 获取DOM元素
 const piano = document.getElementById('piano');
@@ -199,6 +279,10 @@ function createPiano() {
             // 鼠标按下事件 - 立即发声并持续
             key.addEventListener('mousedown', async (e) => {
                 e.preventDefault();
+                if (!isAudioReady()) {
+                    MessageUtils.showWarning("音频尚未加载完成，请稍候");
+                    return;
+                }
                 await handleKeyPress(fullNote, key);
             });
 
@@ -248,6 +332,10 @@ function createPiano() {
                     }, 500);
                 }
                 
+                if (!isAudioReady()) {
+                    MessageUtils.showWarning("音频尚未加载完成，请稍候");
+                    return;
+                }
                 await handleKeyPress(fullNote, key);
             });
 
@@ -312,7 +400,9 @@ function handleNoteSelection(fullNote) {
     updateSelectedNotesDisplay();
     highlightSelectedKeys();
     generateNoteDisplays(); // 重新生成显示区域以更新唱名输入框
-    checkAllValidations(); // 实时验证
+    if (typeof checkAllValidations === 'function') {
+        checkAllValidations(); // 实时验证
+    }
 }
 
 // 处理琴键按下
@@ -329,7 +419,7 @@ async function handleKeyPress(fullNote, key) {
 
         // 播放音符 - 持续发声直到释放
         const velocity = getDefaultVelocity() / 127;
-        sampler.triggerAttack(fullNote, undefined, velocity);
+        getSampler().triggerAttack(fullNote, undefined, velocity);
         
         // 存储当前播放的音符以便释放
         key._currentNote = fullNote;
@@ -344,7 +434,7 @@ async function handleKeyPress(fullNote, key) {
 function handleKeyRelease(fullNote, key) {
     if (key._currentNote) {
         // 停止发声
-        sampler.triggerRelease(key._currentNote);
+        getSampler().triggerRelease(key._currentNote);
         key.classList.remove('playing');
         key._currentNote = null;
     }
@@ -416,7 +506,9 @@ function updateNoteCount(newCount) {
     generateNoteDisplays();
     updateSelectedNotesDisplay();
     highlightSelectedKeys();
-    checkAllValidations(); // 实时验证
+    if (typeof checkAllValidations === 'function') {
+        checkAllValidations(); // 实时验证
+    }
 }
 
 // 生成音符显示区域
@@ -463,13 +555,17 @@ function generateNoteDisplays() {
             solfegeLabels[i] = this.value;
             // 实时验证
             ValidationUtils.validateSolfegeInput(i, this.value, solfegeLabels, noteCount, true);
-            checkAllValidations(); // 实时验证
+            if (typeof checkAllValidations === 'function') {
+                checkAllValidations(); // 实时验证
+            }
         });
 
         // 事件处理：输入框失去焦点
         solfegeInput.addEventListener('change', function () {
             ValidationUtils.validateSolfegeInput(i, this.value, solfegeLabels, noteCount);
-            checkAllValidations(); // 实时验证
+            if (typeof checkAllValidations === 'function') {
+                checkAllValidations(); // 实时验证
+            }
         });
 
         // 组装显示元素
@@ -505,6 +601,11 @@ function generateRandomSequence() {
 
 // 生成随机序列
 async function playRandomSequence() {
+    if (!isAudioReady()) {
+        MessageUtils.showWarning("音源尚未加载完成，请稍候");
+        return;
+    }
+
     // 获取用户输入的随机唱名数量n
     const n = parseInt(randomSolfegeCountInput.value);
     if (isNaN(n) || n < 1) {
@@ -626,7 +727,9 @@ function resetSelection() {
 
     generateNoteDisplays(); // 重新生成显示区域以重置唱名标签
     MessageUtils.showSuccess("选择已重置");
-    checkAllValidations(); // 实时验证
+    if (typeof checkAllValidations === 'function') {
+        checkAllValidations(); // 实时验证
+    }
 }
 
 // 唱名到音符的映射关系
@@ -952,7 +1055,7 @@ async function playFromIndex(startIndex) {
                 
                 chordNotes.forEach(chordNote => {
                     const normalizedVelocity = Math.max(0, Math.min(127, chordNote.velocity)) / 127;
-                    sampler.triggerAttackRelease(chordNote.note, chordNote.duration, undefined, normalizedVelocity);
+                    getSampler().triggerAttackRelease(chordNote.note, chordNote.duration, undefined, normalizedVelocity);
                 });
                 
                 await new Promise(resolve => {
@@ -989,7 +1092,7 @@ async function playFromIndex(startIndex) {
             
             // 播放音符
             const normalizedVelocity = Math.max(0, Math.min(127, item.velocity)) / 127;
-            sampler.triggerAttackRelease(noteToPlay, item.duration, undefined, normalizedVelocity);
+            getSampler().triggerAttackRelease(noteToPlay, item.duration, undefined, normalizedVelocity);
             
             await new Promise(resolve => {
                 const timeout = setTimeout(() => {
@@ -1049,6 +1152,11 @@ function findNoteForSolfege(solfegeStr, solfegeNoteMap, useDefaultMap) {
 
 // 播放唱名序列（支持进度条显示，无跳转功能）
 async function playSolfegeSequence() {
+    if (!isAudioReady()) {
+        MessageUtils.showWarning("音源尚未加载完成，请稍候");
+        return;
+    }
+
     if (isPlaying) {
         stopPlayback();
         return;
@@ -1180,6 +1288,11 @@ function isBlackKey(noteName) {
 
 // 为播放器提供完整的音符支持
 function playNote(noteName, duration, velocity) {
+    if (!isAudioReady()) {
+        console.warn("音频未加载，无法播放");
+        return;
+    }
+
     // 如果没有传入duration，使用输入框的值
     if (duration === undefined) {
         duration = getNoteDuration();
@@ -1190,10 +1303,8 @@ function playNote(noteName, duration, velocity) {
     }
 
     try {
-        if (sampler && sampler.triggerAttackRelease) {
-            const normalizedVelocity = Math.max(0, Math.min(127, velocity)) / 127; // 转换为0-1范围
-            sampler.triggerAttackRelease(noteName, duration, undefined, normalizedVelocity);
-        }
+        const normalizedVelocity = Math.max(0, Math.min(127, velocity)) / 127;
+        getSampler().triggerAttackRelease(noteName, duration, undefined, normalizedVelocity);
     } catch (error) {
         console.error("播放音符错误:", error);
     }
@@ -1206,6 +1317,8 @@ if (typeof module !== 'undefined' && module.exports) {
         getAllPianoNotes,
         getNoteName,
         isBlackKey,
-        playNote
+        playNote,
+        initAudioLoad,
+        isAudioReady
     };
 }

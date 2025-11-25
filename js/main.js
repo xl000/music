@@ -7,66 +7,86 @@ let isHideMode = false;
 let durationRandomRange = 0.5; // 默认50%
 let velocityRandomRange = 0.5; // 默认50%
 
-// 初始化函数
-function init() {
-    // 初始化主题管理器
-    ThemeManager.init();
+// 初始化函数 - 修改为异步，等待音频加载完成
+async function init() {
+    try {
+        // 显示加载界面，隐藏主内容
+        document.body.classList.remove('loaded');
+        
+        // 首先初始化音频加载
+        MessageUtils.showStatusMessage("正在加载音源...");
+        await initAudioLoad(); // 等待音频加载完成
+        
+        // 音频加载完成后，显示主内容
+        document.body.classList.add('loaded');
+        MessageUtils.showSuccess("音源加载完成！");
+        
+        // 初始化主题管理器
+        ThemeManager.init();
 
-    // 设置主题切换事件
-    const themeToggle = document.getElementById('themeToggle');
-    if (themeToggle) {
-        themeToggle.addEventListener('click', () => {
-            ThemeManager.toggle();
-        });
-    }
-
-    // 设置隐藏模式切换事件
-    const hideModeToggle = document.getElementById('hideModeToggle');
-    if (hideModeToggle) {
-        hideModeToggle.addEventListener('click', toggleHideMode);
-    }
-
-    // 检测设备类型
-    DeviceDetector.detect();
-    window.addEventListener('resize', DeviceDetector.detect);
-
-    // 设置音符数量输入框的最大值为琴键总数
-    const totalKeys = getTotalKeys();
-    noteCountInput.max = totalKeys;
-
-    // 设置唱名数量的最大值为音符数量
-    randomSolfegeCountInput.max = parseInt(noteCountInput.value);
-
-    // 初始化随机范围旋钮
-    setDurationRandomRange(0.5); // 默认50%
-    setVelocityRandomRange(0.5); // 默认50%
-
-    // 更新旋钮指示器位置
-    updateRandomRangeKnobIndicators();
-
-    createPiano();
-    setupEventListeners();
-    updateNoteCount(3);
-
-    // 页面加载后自动重置选择
-    resetSelection();
-
-    // 添加箭头滚动功能
-    setupScrollArrows();
-
-    // 自动点击两次右箭头
-    setTimeout(() => {
-        const rightArrow = document.querySelector('.right-arrow');
-        if (rightArrow) {
-            rightArrow.click();
-            setTimeout(() => {
-                rightArrow.click();
-            }, 500);
+        // 设置主题切换事件
+        const themeToggle = document.getElementById('themeToggle');
+        if (themeToggle) {
+            themeToggle.addEventListener('click', () => {
+                ThemeManager.toggle();
+            });
         }
-    }, 1000);
 
-    // 初始验证
-    checkAllValidations();
+        // 设置隐藏模式切换事件
+        const hideModeToggle = document.getElementById('hideModeToggle');
+        if (hideModeToggle) {
+            hideModeToggle.addEventListener('click', toggleHideMode);
+        }
+
+        // 检测设备类型
+        DeviceDetector.detect();
+        window.addEventListener('resize', DeviceDetector.detect);
+
+        // 设置音符数量输入框的最大值为琴键总数
+        const totalKeys = getTotalKeys();
+        noteCountInput.max = totalKeys;
+
+        // 设置唱名数量的最大值为音符数量
+        randomSolfegeCountInput.max = parseInt(noteCountInput.value);
+
+        // 初始化随机范围旋钮
+        setDurationRandomRange(0.5); // 默认50%
+        setVelocityRandomRange(0.5); // 默认50%
+
+        // 更新旋钮指示器位置
+        updateRandomRangeKnobIndicators();
+
+        createPiano();
+        setupEventListeners();
+        updateNoteCount(3);
+
+        // 页面加载后自动重置选择
+        resetSelection();
+
+        // 添加箭头滚动功能
+        setupScrollArrows();
+
+        // 自动点击两次右箭头
+        setTimeout(() => {
+            const rightArrow = document.querySelector('.right-arrow');
+            if (rightArrow) {
+                rightArrow.click();
+                setTimeout(() => {
+                    rightArrow.click();
+                }, 500);
+            }
+        }, 1000);
+
+        // 初始验证
+        checkAllValidations();
+        
+    } catch (error) {
+        console.error("初始化失败:", error);
+        MessageUtils.showError("初始化失败: " + error.message);
+        
+        // 即使音频加载失败，也显示主界面（但功能可能受限）
+        document.body.classList.add('loaded');
+    }
 }
 
 // 切换隐藏模式函数
@@ -76,7 +96,7 @@ function toggleHideMode() {
     const hideModeBtn = document.getElementById('hideModeToggle');
 
     if (isHideMode) {
-        body.classList.add('hide-mode');  // 修改：添加hide-mode类
+        body.classList.add('hide-mode');
         hideModeBtn.textContent = '解除隐藏';
         // 确保钢琴键标签也被隐藏
         document.querySelectorAll('.key-label').forEach(label => {
@@ -84,7 +104,7 @@ function toggleHideMode() {
         });
         MessageUtils.showSuccess("已进入隐藏模式");
     } else {
-        body.classList.remove('hide-mode');  // 修改：移除hide-mode类
+        body.classList.remove('hide-mode');
         hideModeBtn.textContent = '开启隐藏';
         // 恢复显示钢琴键标签
         document.querySelectorAll('.key-label').forEach(label => {
@@ -114,8 +134,8 @@ function parseSingleNote(item) {
     const parts = item.split('_');
     const result = {
         solfege: parts[0] || '',
-        duration: getNoteDuration(), // 默认使用固定时长
-        velocity: getDefaultVelocity() // 默认使用固定力度
+        duration: getNoteDuration(),
+        velocity: getDefaultVelocity()
     };
 
     // 根据下划线数量判断参数显示情况
@@ -142,12 +162,12 @@ function parseSingleNote(item) {
     return result;
 }
 
-// 在setupEventListeners函数中添加按钮点击事件设置
+// 设置事件监听器
 function setupEventListeners() {
-    // 先设置按钮的禁用状态点击提示
+    // 设置按钮的禁用状态点击提示
     setupButtonClickHandlers();
 
-    // 然后再设置其他事件监听器
+    // 设置其他事件监听器
     randomBtn.addEventListener('click', playRandomSequence);
     resetBtn.addEventListener('click', resetSelection);
 
@@ -197,7 +217,7 @@ function setupEventListeners() {
         checkAllValidations();
     });
 
-    // 新增：音符类型变化监听
+    // 音符类型变化监听
     const noteTypeSelect = document.getElementById('noteType');
     noteTypeSelect.addEventListener('change', () => {
         checkAllValidations();
@@ -207,7 +227,7 @@ function setupEventListeners() {
     const noteDurationInput = document.getElementById('noteDuration');
     const noteDurationError = document.getElementById('noteDurationError');
 
-    // 新增：音符力度输入验证
+    // 音符力度输入验证
     const noteVelocityInput = document.getElementById('noteVelocity');
     const noteVelocityError = document.getElementById('noteVelocityError');
 
@@ -233,24 +253,23 @@ function setupEventListeners() {
         checkAllValidations();
     });
 
-    // 新增力度验证
-noteVelocityInput.addEventListener('input', () => {
-    const value = noteVelocityInput.value === '' ? NaN : parseInt(noteVelocityInput.value);
-    // 移除第三个参数true，因为validateNoteVelocity函数已经修改为总是显示错误
-    ValidationUtils.validateNoteVelocity(value, noteVelocityError);
-    checkAllValidations();
-});
+    // 力度验证
+    noteVelocityInput.addEventListener('input', () => {
+        const value = noteVelocityInput.value === '' ? NaN : parseInt(noteVelocityInput.value);
+        ValidationUtils.validateNoteVelocity(value, noteVelocityError);
+        checkAllValidations();
+    });
 
-noteVelocityInput.addEventListener('change', () => {
-    const value = noteVelocityInput.value === '' ? NaN : parseInt(noteVelocityInput.value);
-    ValidationUtils.validateNoteVelocity(value, noteVelocityError);
-    checkAllValidations();
-});
+    noteVelocityInput.addEventListener('change', () => {
+        const value = noteVelocityInput.value === '' ? NaN : parseInt(noteVelocityInput.value);
+        ValidationUtils.validateNoteVelocity(value, noteVelocityError);
+        checkAllValidations();
+    });
 
     // 初始格式化显示
     formatNoteDurationDisplay();
 
-    // 新增：时值随机范围旋钮事件监听
+    // 时值随机范围旋钮事件监听
     document.getElementById('durationRandomRangeKnob').addEventListener('click', (e) => {
         handleRandomRangeKnobClick(e, 'duration');
     });
@@ -263,7 +282,7 @@ noteVelocityInput.addEventListener('change', () => {
         setDurationRandomRange(Math.min(1.0, durationRandomRange + 0.1));
     });
 
-    // 新增：力度随机范围旋钮事件监听
+    // 力度随机范围旋钮事件监听
     document.getElementById('velocityRandomRangeKnob').addEventListener('click', (e) => {
         handleRandomRangeKnobClick(e, 'velocity');
     });
@@ -292,7 +311,6 @@ function checkAllValidations() {
     const noteDurationValid = ValidationUtils.validateNoteDuration(noteDurationValue, document.getElementById('noteDurationError'));
     const noteVelocityValid = ValidationUtils.validateNoteVelocity(noteVelocityValue, document.getElementById('noteVelocityError'));
 
-
     const notesSelected = selectedNotes.length === noteCount;
 
     let allSolfegeFilled = true;
@@ -313,6 +331,7 @@ function checkAllValidations() {
         if (hasDuplicateSolfege) break;
     }
 
+    // 移除了音频就绪检查，因为现在只有在音频加载完成后才会显示界面
     const playbackButtonsEnabled = noteCountValid && solfegeCountValid && noteDurationValid && noteVelocityValid &&
         notesSelected && allSolfegeFilled && !hasDuplicateSolfege;
 
@@ -330,7 +349,7 @@ function updateButtonStates(playbackButtonsEnabled, playButtonEnabled) {
     document.getElementById('resetBtn').disabled = false;
 }
 
-// 添加按钮点击事件处理
+// 设置按钮点击事件处理
 function setupButtonClickHandlers() {
     const buttons = [
         document.getElementById('playbackBtn'),
@@ -370,7 +389,7 @@ function setupButtonClickHandlers() {
                     const solfegeCountValue = randomSolfegeCountInput.value === '' ? NaN : parseInt(randomSolfegeCountInput.value);
                     const randomMode = randomModeSelect.value;
                     const noteDurationValue = document.getElementById('noteDuration').value === '' ? NaN : parseFloat(document.getElementById('noteDuration').value);
-
+                    const noteVelocityValue = document.getElementById('noteVelocity').value === '' ? NaN : parseInt(document.getElementById('noteVelocity').value);
 
                     if (randomMode === 'allowRepeat') {
                         if (isNaN(solfegeCountValue) || solfegeCountValue < 1) {
@@ -386,7 +405,6 @@ function setupButtonClickHandlers() {
                         reason = "请先输入有效的音符时长（0-4秒）";
                     } 
 
-                    // 在按钮点击处理函数中添加力度验证
                     if (isNaN(noteVelocityValue) || noteVelocityValue < 0 || noteVelocityValue > 127) {
                         reason = "请先输入有效的音符力度（0-127）";
                     }
@@ -430,7 +448,7 @@ function setupButtonClickHandlers() {
     otherButtonsNew[0].addEventListener('click', resetSelection);
 }
 
-// 新增：处理随机范围旋钮点击
+// 处理随机范围旋钮点击
 function handleRandomRangeKnobClick(e, type) {
     const knob = e.currentTarget;
     const rect = knob.getBoundingClientRect();
@@ -454,7 +472,7 @@ function handleRandomRangeKnobClick(e, type) {
     }
 }
 
-// 新增：设置时值随机范围
+// 设置时值随机范围
 function setDurationRandomRange(value) {
     durationRandomRange = Math.round(value * 10) / 10; // 确保是0.1的倍数
     document.getElementById('durationRandomRangeValue').textContent = Math.round(durationRandomRange * 100) + '%';
@@ -462,7 +480,7 @@ function setDurationRandomRange(value) {
     MessageUtils.showStatusMessage(`时值随机范围已设置为 ${Math.round(durationRandomRange * 100)}% (以基础时值为中心)`);
 }
 
-// 新增：设置力度随机范围
+// 设置力度随机范围
 function setVelocityRandomRange(value) {
     velocityRandomRange = Math.round(value * 10) / 10; // 确保是0.1的倍数
     document.getElementById('velocityRandomRangeValue').textContent = Math.round(velocityRandomRange * 100) + '%';
@@ -470,7 +488,7 @@ function setVelocityRandomRange(value) {
     MessageUtils.showStatusMessage(`力度随机范围已设置为 ${Math.round(velocityRandomRange * 100)}% (以基础力度为中心)`);
 }
 
-// 新增：更新随机范围旋钮指示器
+// 更新随机范围旋钮指示器
 function updateRandomRangeKnobIndicators() {
     // 时值随机范围旋钮：10%-100%映射到0-360度
     const durationAngle = ((durationRandomRange - 0.1) / 0.9) * 360;
@@ -483,8 +501,58 @@ function updateRandomRangeKnobIndicators() {
         `translateX(-50%) rotate(${velocityAngle}deg)`;
 }
 
+// 获取琴键总数
+function getTotalKeys() {
+    // 从piano.js中获取琴键总数
+    if (typeof getTotalKeys === 'function') {
+        return getTotalKeys();
+    }
+    return 88; // 默认值
+}
+
+// 获取音符时长
+function getNoteDuration() {
+    const noteDurationInput = document.getElementById('noteDuration');
+    if (noteDurationInput) {
+        const value = parseFloat(noteDurationInput.value);
+        return isNaN(value) ? 0.5 : Math.max(0, Math.min(4, value));
+    }
+    return 0.5;
+}
+
+// 获取默认力度
+function getDefaultVelocity() {
+    const noteVelocityInput = document.getElementById('noteVelocity');
+    if (noteVelocityInput) {
+        const value = parseInt(noteVelocityInput.value);
+        return isNaN(value) ? 100 : Math.max(0, Math.min(127, value));
+    }
+    return 100;
+}
+
+// 格式化音符时长显示
+function formatNoteDurationDisplay() {
+    const noteDurationInput = document.getElementById('noteDuration');
+    if (noteDurationInput) {
+        const value = parseFloat(noteDurationInput.value);
+        if (!isNaN(value)) {
+            noteDurationInput.value = formatDurationDisplay(value);
+        }
+    }
+}
+
 // 初始化应用
-init();
+document.addEventListener('DOMContentLoaded', function() {
+    init().catch(error => {
+        console.error("应用初始化失败:", error);
+        MessageUtils.showError("应用启动失败: " + error.message);
+        
+        // 即使初始化失败，也尝试显示主界面
+        setTimeout(() => {
+            document.body.classList.add('loaded');
+        }, 1000);
+    });
+});
 
 // 按钮状态监听
 (function initButtonListener() {
@@ -503,10 +571,38 @@ init();
         }
     }
 
-    new MutationObserver(updateButtonState).observe(randomBtn, {
-        attributes: true,
-        attributeFilter: ['disabled']
-    });
-
-    updateButtonState();
+    // 确保元素存在
+    if (randomBtn) {
+        new MutationObserver(updateButtonState).observe(randomBtn, {
+            attributes: true,
+            attributeFilter: ['disabled']
+        });
+        updateButtonState();
+    }
 })();
+
+// 全局变量声明（确保与piano.js中的变量一致）
+let noteCountInput = document.getElementById('noteCount');
+let randomModeSelect = document.getElementById('randomMode');
+let randomSolfegeCountInput = document.getElementById('randomSolfegeCount');
+let noteTypeSelect = document.getElementById('noteType');
+let noteCountError = document.getElementById('noteCountError');
+let randomSolfegeCountError = document.getElementById('randomSolfegeCountError');
+let selectedNotes = ["A4", "B4", "F#4"];
+let solfegeLabels = {};
+let noteCount = 3;
+let randomBtn = document.getElementById('randomBtn');
+let resetBtn = document.getElementById('resetBtn');
+
+// 确保DOM加载完成后获取元素
+document.addEventListener('DOMContentLoaded', function() {
+    // 重新获取元素引用
+    noteCountInput = document.getElementById('noteCount');
+    randomModeSelect = document.getElementById('randomMode');
+    randomSolfegeCountInput = document.getElementById('randomSolfegeCount');
+    noteTypeSelect = document.getElementById('noteType');
+    noteCountError = document.getElementById('noteCountError');
+    randomSolfegeCountError = document.getElementById('randomSolfegeCountError');
+    randomBtn = document.getElementById('randomBtn');
+    resetBtn = document.getElementById('resetBtn');
+});
