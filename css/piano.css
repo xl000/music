@@ -56,10 +56,12 @@
     background: linear-gradient(to bottom, #546e7a 0%, #455a64 100%);
 }
 
-/* 选中的琴键样式 - 修复高亮覆盖问题 */
+/* 选中的琴键样式 - 修复：移除transform避免尺寸变化 */
 .key.selected {
-    /* 移除 transform: translateY(-2px) 避免尺寸变化 */
+    /* 移除 transform: translateY(-2px) 避免双击时尺寸变化 */
     position: relative;
+    /* 使用z-index和阴影来增强高亮效果，而不是移动位置 */
+    z-index: 3;
 }
 
 /* 白键选中样式 - 确保高亮效果在黑键下层 */
