@@ -1392,3 +1392,12 @@ if (typeof module !== 'undefined' && module.exports) {
         safePlayNote
     };
 }
+
+// 确保这些函数在全局可用
+window.updateNoteCount = updateNoteCount;
+window.resetSelection = resetSelection;
+window.playRandomSequence = playRandomSequence;
+window.playSolfegeSequence = playSolfegeSequence;
+window.selectedNotes = selectedNotes;
+window.solfegeLabels = solfegeLabels;
+window.noteCount = noteCount;

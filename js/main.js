@@ -64,7 +64,13 @@ function initMainApp() {
 
     createPiano();
     setupEventListeners();
-    updateNoteCount(3);
+    
+    // 修复：避免直接调用 updateNoteCount，等待 piano.js 初始化完成
+    setTimeout(() => {
+        if (window.updateNoteCount) {
+            window.updateNoteCount(3);
+        }
+    }, 100);
 
     // 页面加载后自动重置选择
     resetSelection();
@@ -223,7 +229,10 @@ function setupEventListeners() {
         if (noteCountError && window.ValidationUtils) {
             if (ValidationUtils.validateNoteCount(value, getTotalKeys(), noteCountError)) {
                 if (!isNaN(value)) {
-                    updateNoteCount(value);
+                    // 修复：通过 window 调用 piano.js 中的函数
+                    if (window.updateNoteCount) {
+                        window.updateNoteCount(value);
+                    }
                 }
             }
         }
@@ -749,17 +758,12 @@ function setupScrollArrows() {
     }
 }
 
-// 更新音符数量
-function updateNoteCount(newCount) {
-    if (window.updateNoteCount) {
-        window.updateNoteCount(newCount);
-    } else {
-        console.warn("updateNoteCount函数未在全局作用域中找到");
-    }
-}
+// 修复：删除 main.js 中的 updateNoteCount 函数，避免递归调用
+// 这个函数应该在 piano.js 中定义
 
 // 重置选择
 function resetSelection() {
+    // 修复：通过 window 调用 piano.js 中的函数
     if (window.resetSelection) {
         window.resetSelection();
     } else {
@@ -769,6 +773,7 @@ function resetSelection() {
 
 // 播放随机序列
 function playRandomSequence() {
+    // 修复：通过 window 调用 piano.js 中的函数
     if (window.playRandomSequence) {
         window.playRandomSequence();
     } else {
@@ -778,6 +783,7 @@ function playRandomSequence() {
 
 // 播放唱名序列
 function playSolfegeSequence() {
+    // 修复：通过 window 调用 piano.js 中的函数
     if (window.playSolfegeSequence) {
         window.playSolfegeSequence();
     } else {
