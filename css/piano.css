@@ -63,26 +63,30 @@
     position: relative;
 }
 
-/* 白键选中样式 - 限制高亮范围，不覆盖黑键 */
+/* 白键选中样式 - 确保高亮效果只在白键内部，不覆盖黑键 */
 .selected.white {
     background: linear-gradient(to bottom, #fff9c4 0%, #fff176 100%) !important;
     border-color: #ffb300;
-    box-shadow: 0 0 8px rgba(255, 183, 77, 0.6) !important;
-    /* 确保白键高亮不会溢出到黑键区域 */
-    margin: 0;
+    /* 关键修复：使用内阴影而不是外阴影，避免覆盖黑键 */
+    box-shadow: 
+        inset 0 0 8px rgba(255, 183, 77, 0.6), /* 内阴影提供高亮效果 */
+        0 2px 4px rgba(0, 0, 0, 0.2) !important; /* 保留一点外阴影用于立体感 */
+    /* 确保白键的尺寸和位置不变 */
     width: 32px;
+    margin: 0;
     z-index: 3;
 }
 
-/* 黑键选中样式 - 确保高亮效果只在黑键本身 */
+/* 黑键选中样式 - 确保高亮效果在黑键上层 */
 .selected.black {
     background: linear-gradient(to bottom, #ffd54f 0%, #ffb300 100%) !important;
     border-color: #e65100;
-    box-shadow: 0 0 10px rgba(255, 183, 77, 0.8) !important;
-    /* 确保黑键的高亮不会扩展到相邻区域 */
+    /* 黑键可以使用外阴影，因为它在白键上层 */
+    box-shadow: 0 0 12px rgba(255, 183, 77, 0.9) !important;
+    /* 保持黑键的定位 */
     margin: 0 -10px !important;
     width: 20px !important;
-    z-index: 4; /* 黑键的z-index比白键高 */
+    z-index: 4; /* 黑键的z-index比白键高，确保在上层 */
 }
 
 .playing {
@@ -181,7 +185,9 @@ body.hide-mode .key.selected.black {
     }
     
     .selected.white {
-        box-shadow: 0 0 6px rgba(255, 183, 77, 0.7) !important;
+        box-shadow: 
+            inset 0 0 6px rgba(255, 183, 77, 0.6),
+            0 1px 3px rgba(0, 0, 0, 0.2) !important;
     }
     
     .selected.black {
