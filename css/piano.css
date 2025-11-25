@@ -58,7 +58,7 @@
 
 /* 选中的琴键样式 - 修复高亮覆盖问题 */
 .key.selected {
-    transform: translateY(-2px);
+    /* 移除 transform: translateY(-2px) 避免尺寸变化 */
     position: relative;
 }
 
@@ -66,7 +66,7 @@
 .selected.white {
     background: linear-gradient(to bottom, #fff9c4 0%, #fff176 100%) !important;
     border-color: #ffb300;
-    box-shadow: 0 0 8px rgba(255, 183, 77, 0.6) !important;
+    box-shadow: 0 0 12px rgba(255, 183, 77, 0.7) !important; /* 增强阴影效果 */
     /* 确保白键高亮不会溢出到黑键区域 */
     margin: 0;
     width: 32px;
@@ -77,7 +77,7 @@
 .selected.black {
     background: linear-gradient(to bottom, #ffd54f 0%, #ffb300 100%) !important;
     border-color: #e65100;
-    box-shadow: 0 0 10px rgba(255, 183, 77, 0.8) !important;
+    box-shadow: 0 0 15px rgba(255, 183, 77, 0.9) !important; /* 增强阴影效果 */
     /* 确保黑键的高亮不会扩展到相邻区域 */
     margin: 0 -10px !important;
     width: 20px !important;
@@ -180,22 +180,22 @@ body.hide-mode .key.selected.black {
     }
     
     .selected.white {
-        box-shadow: 0 0 6px rgba(255, 183, 77, 0.7) !important;
+        box-shadow: 0 0 8px rgba(255, 183, 77, 0.7) !important;
     }
     
     .selected.black {
-        box-shadow: 0 0 8px rgba(255, 183, 77, 0.9) !important;
+        box-shadow: 0 0 10px rgba(255, 183, 77, 0.9) !important;
         margin: 0 -9px !important;
         width: 18px !important;
     }
     
-    /* 增强移动端选中状态的视觉反馈 */
+    /* 移除移动端的transform效果 */
     .key:active {
-        transform: scale(0.98);
+        transform: none; /* 移除缩放效果 */
     }
     
     .selected:active {
-        transform: scale(0.98) translateY(-1px);
+        transform: none; /* 移除缩放效果 */
     }
 }
 
