@@ -1,5 +1,9 @@
 // 工具函数模块 - 输入检查、报错/弹窗信息、主题切换、设备检测
 
+// 全局音频状态变量
+window.isAudioLoaded = false;
+window.loadProgress = 0;
+
 // 输入验证相关功能
 const ValidationUtils = {
     // 验证音符数量
@@ -340,9 +344,72 @@ const GeneralUtils = {
     }
 };
 
+// 音频状态管理功能
+const AudioStateManager = {
+    // 检查音频是否已加载
+    isAudioReady() {
+        return window.isAudioLoaded || false;
+    },
+
+    // 设置音频加载状态
+    setAudioLoaded(status) {
+        window.isAudioLoaded = status;
+    },
+
+    // 获取加载进度
+    getLoadProgress() {
+        return window.loadProgress || 0;
+    },
+
+    // 设置加载进度
+    setLoadProgress(progress) {
+        window.loadProgress = Math.max(0, Math.min(100, progress));
+    },
+
+    // 等待音频加载完成
+    waitForAudioLoad() {
+        return new Promise((resolve) => {
+            if (this.isAudioReady()) {
+                resolve();
+                return;
+            }
+
+            const checkInterval = setInterval(() => {
+                if (this.isAudioReady()) {
+                    clearInterval(checkInterval);
+                    resolve();
+                }
+            }, 100);
+        });
+    },
+
+    // 显示加载状态
+    showLoadingState(message, progress) {
+        const loadingDetails = document.getElementById('loadingDetails');
+        const progressBar = document.getElementById('globalProgressBar');
+        const progressText = document.getElementById('progressText');
+        
+        if (loadingDetails) {
+            loadingDetails.textContent = message;
+        }
+        if (progressBar) {
+            progressBar.style.width = progress + '%';
+        }
+        if (progressText) {
+            progressText.textContent = Math.round(progress) + '%';
+        }
+    }
+};
+
 // 导出所有工具函数
 window.ValidationUtils = ValidationUtils;
 window.MessageUtils = MessageUtils;
 window.ThemeManager = ThemeManager;
 window.DeviceDetector = DeviceDetector;
 window.GeneralUtils = GeneralUtils;
+window.AudioStateManager = AudioStateManager;
+
+// 兼容性函数
+window.isAudioReady = function() {
+    return AudioStateManager.isAudioReady();
+};
