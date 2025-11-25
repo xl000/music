@@ -75,6 +75,8 @@ let currentPlaybackSequence = [];
 // 触摸事件控制变量
 let touchStartTime = 0;
 let isTouchMoving = false;
+let lastTapTime = 0; // 记录上一次点击时间，用于双击检测
+let tapTimeout = null; // 双击检测的定时器
 
 // 进度条元素
 const progressBar = document.getElementById('progressBar');
@@ -212,25 +214,39 @@ function createPiano() {
                 handleKeyRelease(fullNote, key);
             });
 
-            // 点击事件 - 选择音符（不播放声音）
-            key.addEventListener('click', (e) => {
+            // 双击事件 - 选择音符（不播放声音）
+            key.addEventListener('dblclick', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 handleNoteSelection(fullNote);
             });
 
-            // 触摸事件支持 - 改进移动端处理
+            // 触摸事件支持 - 改进移动端处理，支持双击选择
             key.addEventListener('touchstart', async (e) => {
                 e.preventDefault();
                 touchStartTime = Date.now();
                 isTouchMoving = false;
                 
-                // 延迟处理，区分点击和滑动
-                setTimeout(() => {
-                    if (!isTouchMoving && Date.now() - touchStartTime < 300) {
-                        handleNoteSelection(fullNote);
+                // 双击检测
+                const currentTime = new Date().getTime();
+                const tapLength = currentTime - lastTapTime;
+                if (tapLength < 500 && tapLength > 0) {
+                    // 双击事件
+                    e.preventDefault();
+                    if (tapTimeout) {
+                        clearTimeout(tapTimeout);
+                        tapTimeout = null;
                     }
-                }, 100);
+                    lastTapTime = 0;
+                    handleNoteSelection(fullNote);
+                } else {
+                    // 第一次点击
+                    lastTapTime = currentTime;
+                    tapTimeout = setTimeout(() => {
+                        // 单机超时，不处理选择
+                        lastTapTime = 0;
+                    }, 500);
+                }
                 
                 await handleKeyPress(fullNote, key);
             });
@@ -243,11 +259,6 @@ function createPiano() {
             key.addEventListener('touchend', (e) => {
                 e.preventDefault();
                 handleKeyRelease(fullNote, key);
-                
-                // 如果是短按且没有移动，则选择音符
-                if (!isTouchMoving && Date.now() - touchStartTime < 300) {
-                    handleNoteSelection(fullNote);
-                }
             });
 
             key.addEventListener('touchcancel', (e) => {
