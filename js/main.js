@@ -165,13 +165,6 @@ function setupEventListeners() {
     // 先设置按钮的禁用状态点击提示
     setupButtonClickHandlers();
 
-    // 然后再设置其他事件监听器
-    randomBtn.addEventListener('click', playRandomSequence);
-    resetBtn.addEventListener('click', resetSelection);
-
-    // 点播按钮事件监听
-    document.getElementById('playbackBtn').addEventListener('click', playSolfegeSequence);
-
     // 音符数量变化监听
     noteCountInput.addEventListener('change', () => {
         const value = noteCountInput.value === '' ? NaN : parseInt(noteCountInput.value);
@@ -351,30 +344,17 @@ function updateButtonStates(playbackButtonsEnabled, playButtonEnabled) {
 // 添加按钮点击事件处理
 function setupButtonClickHandlers() {
     const buttons = [
-        document.getElementById('playbackBtn'),
-        document.getElementById('randomBtn')
+        { id: 'playbackBtn', handler: playSolfegeSequence },
+        { id: 'randomBtn', handler: playRandomSequence }
     ];
 
-    const otherButtons = [
-        document.getElementById('resetBtn')
-    ];
-
-    buttons.forEach(button => {
+    buttons.forEach(buttonInfo => {
+        const button = document.getElementById(buttonInfo.id);
         const newButton = button.cloneNode(true);
         button.parentNode.replaceChild(newButton, button);
-    });
 
-    const playbackButtons = [
-        document.getElementById('playbackBtn'),
-        document.getElementById('randomBtn')
-    ];
-
-    const otherButtonsNew = [
-        document.getElementById('resetBtn')
-    ];
-
-    playbackButtons.forEach(button => {
-        button.addEventListener('click', function (e) {
+        // 为新按钮添加事件监听器
+        document.getElementById(buttonInfo.id).addEventListener('click', function(e) {
             if (this.disabled) {
                 e.preventDefault();
                 e.stopPropagation();
@@ -388,7 +368,7 @@ function setupButtonClickHandlers() {
                     const solfegeCountValue = randomSolfegeCountInput.value === '' ? NaN : parseInt(randomSolfegeCountInput.value);
                     const randomMode = randomModeSelect.value;
                     const noteDurationValue = document.getElementById('noteDuration').value === '' ? NaN : parseFloat(document.getElementById('noteDuration').value);
-
+                    const noteVelocityValue = document.getElementById('noteVelocity').value === '' ? NaN : parseInt(document.getElementById('noteVelocity').value);
 
                     if (randomMode === 'allowRepeat') {
                         if (isNaN(solfegeCountValue) || solfegeCountValue < 1) {
@@ -404,12 +384,9 @@ function setupButtonClickHandlers() {
                         reason = "请先输入有效的音符时长（0-4秒）";
                     } 
 
-                    // 在按钮点击处理函数中添加力度验证
                     if (isNaN(noteVelocityValue) || noteVelocityValue < 0 || noteVelocityValue > 127) {
                         reason = "请先输入有效的音符力度（0-127）";
-                    }
-                    
-                    else if (selectedNotes.length !== noteCount) {
+                    } else if (selectedNotes.length !== noteCount) {
                         reason = "请先选择所有" + noteCount + "个音符";
                     } else {
                         let missingSolfege = false;
@@ -441,12 +418,20 @@ function setupButtonClickHandlers() {
 
                 MessageUtils.showAlert(reason);
                 return false;
+            } else {
+                // 按钮启用时执行对应的处理函数
+                buttonInfo.handler.call(this);
             }
         });
     });
 
-    otherButtonsNew[0].addEventListener('click', resetSelection);
+    // 重置按钮单独处理
+    const resetBtn = document.getElementById('resetBtn');
+    const newResetBtn = resetBtn.cloneNode(true);
+    resetBtn.parentNode.replaceChild(newResetBtn, resetBtn);
+    document.getElementById('resetBtn').addEventListener('click', resetSelection);
 }
+
 
 // 新增：处理随机范围旋钮点击
 function handleRandomRangeKnobClick(e, type) {
@@ -503,28 +488,3 @@ function updateRandomRangeKnobIndicators() {
 
 // 初始化应用
 init();
-
-// 按钮状态监听
-(function initButtonListener() {
-    const randomBtn = document.getElementById('randomBtn');
-    let clickHandler = null;
-
-    function updateButtonState() {
-        const isDisabled = randomBtn.disabled;
-
-        if (isDisabled && clickHandler) {
-            randomBtn.removeEventListener('click', clickHandler);
-            clickHandler = null;
-        } else if (!isDisabled && !clickHandler) {
-            clickHandler = () => playRandomSequence();
-            randomBtn.addEventListener('click', clickHandler);
-        }
-    }
-
-    new MutationObserver(updateButtonState).observe(randomBtn, {
-        attributes: true,
-        attributeFilter: ['disabled']
-    });
-
-    updateButtonState();
-})();

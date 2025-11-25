@@ -1,5 +1,10 @@
 // 钢琴相关功能模块
 
+// 添加全局声明
+window.playRandomSequence = playRandomSequence;
+window.playSolfegeSequence = playSolfegeSequence;
+window.resetSelection = resetSelection;
+
 // 钢琴键盘配置 - 扩展到A0到C8（88键标准钢琴）
 const octaveStart = 0; // 从A0开始
 const octaveEnd = 8;   // 到C8结束
