@@ -9,7 +9,7 @@
     box-shadow: inset 0 0 15px rgba(128, 222, 234, 0.3);
     -webkit-overflow-scrolling: touch;
     min-width: 100%;
-    -webkit-tap-highlight-color: transparent; /* 移除移动端点击高亮 */
+    -webkit-tap-highlight-color: transparent;
 }
 
 .piano {
@@ -18,7 +18,7 @@
     height: 150px;
     min-width: calc(52 * 32px + 36 * 10px);
     margin: 8px auto;
-    -webkit-user-select: none; /* 禁止文本选择 */
+    -webkit-user-select: none;
     user-select: none;
 }
 
@@ -29,7 +29,7 @@
     transition: all 0.2s;
     box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
     touch-action: manipulation;
-    -webkit-tap-highlight-color: transparent; /* 移除移动端点击高亮 */
+    -webkit-tap-highlight-color: transparent;
 }
 
 .white {
@@ -37,7 +37,7 @@
     height: 150px;
     background: linear-gradient(to bottom, #fff 0%, #f5f5f5 100%);
     border: 1px solid #e0e0e0;
-    z-index: 1; /* 白键默认在底层 */
+    z-index: 1;
 }
 
 .white:hover {
@@ -49,41 +49,34 @@
     height: 90px;
     background: linear-gradient(to bottom, #455a64 0%, #37474f 100%);
     margin: 0 -10px;
-    z-index: 2; /* 黑键始终在白键上层 */
+    z-index: 2;
 }
 
 .black:hover {
     background: linear-gradient(to bottom, #546e7a 0%, #455a64 100%);
 }
 
-/* 选中的琴键样式 - 修复：移除transform避免尺寸变化 */
 .key.selected {
-    /* 移除 transform: translateY(-2px) 避免双击时尺寸变化 */
     position: relative;
-    /* 使用z-index和阴影来增强高亮效果，而不是移动位置 */
     z-index: 3;
 }
 
-/* 白键选中样式 - 确保高亮效果在黑键下层 */
 .selected.white {
     background: linear-gradient(to bottom, #fff9c4 0%, #fff176 100%) !important;
     border-color: #ffb300;
-    box-shadow: 0 0 12px rgba(255, 183, 77, 0.7) !important; /* 增强阴影效果 */
-    /* 确保白键高亮不会溢出到黑键区域 */
+    box-shadow: 0 0 12px rgba(255, 183, 77, 0.7) !important;
     margin: 0;
-    width: 32px; /* 基础宽度，会被设备特定样式覆盖 */
-    z-index: 1; /* 保持白键在底层，不覆盖黑键 */
+    width: 32px;
+    z-index: 1;
 }
 
-/* 黑键选中样式 - 确保高亮效果只在黑键本身 */
 .selected.black {
     background: linear-gradient(to bottom, #ffd54f 0%, #ffb300 100%) !important;
     border-color: #e65100;
-    box-shadow: 0 0 15px rgba(255, 183, 77, 0.9) !important; /* 增强阴影效果 */
-    /* 确保黑键的高亮不会扩展到相邻区域 */
+    box-shadow: 0 0 15px rgba(255, 183, 77, 0.9) !important;
     margin: 0 -10px !important;
-    width: 20px !important; /* 基础宽度，会被设备特定样式覆盖 */
-    z-index: 2; /* 黑键保持在上层 */
+    width: 20px !important;
+    z-index: 2;
 }
 
 .playing {
@@ -98,7 +91,7 @@
     font-size: 0.65rem;
     font-weight: bold;
     color: #455a64;
-    pointer-events: none; /* 防止标签干扰点击 */
+    pointer-events: none;
 }
 
 .black .key-label {
@@ -125,8 +118,8 @@
     font-weight: bold;
     color: #e65100;
     text-shadow: 0 0 3px #fff;
-    pointer-events: none; /* 防止指示器干扰点击 */
-    z-index: 5; /* 确保位置指示器在最上层 */
+    pointer-events: none;
+    z-index: 5;
 }
 
 .black .position-indicator {
@@ -136,7 +129,6 @@
     text-shadow: 0 0 3px #000;
 }
 
-/* 主题相关的钢琴样式 */
 body.default-theme .piano-container {
     background: rgba(255, 255, 255, 0.7);
 }
@@ -145,7 +137,6 @@ body.pink-theme .piano-container {
     background: rgba(255, 255, 255, 0.75);
 }
 
-/* 确保隐藏模式下的播放效果被完全隐藏 */
 body.hide-mode .key.playing {
     background: inherit !important;
     box-shadow: none !important;
@@ -157,7 +148,6 @@ body.hide-mode .key.playing::after {
     display: none !important;
 }
 
-/* 分别处理白色和黑色键的隐藏模式样式 */
 body.hide-mode .key.playing.white {
     background: linear-gradient(to bottom, #fff 0%, #f5f5f5 100%) !important;
 }
@@ -166,7 +156,6 @@ body.hide-mode .key.playing.black {
     background: linear-gradient(to bottom, #455a64 0%, #37474f 100%) !important;
 }
 
-/* 确保选中状态在隐藏模式下保持可见 */
 body.hide-mode .key.selected.white {
     background: linear-gradient(to bottom, #fff9c4 0%, #fff176 100%) !important;
 }
@@ -175,7 +164,6 @@ body.hide-mode .key.selected.black {
     background: linear-gradient(to bottom, #ffd54f 0%, #ffb300 100%) !important;
 }
 
-/* 移动端触摸优化 */
 @media (max-width: 768px) {
     .key {
         -webkit-tap-highlight-color: transparent;
@@ -191,17 +179,15 @@ body.hide-mode .key.selected.black {
         width: 18px !important;
     }
     
-    /* 移除移动端的transform效果 */
     .key:active {
-        transform: none; /* 移除缩放效果 */
+        transform: none;
     }
     
     .selected:active {
-        transform: none; /* 移除缩放效果 */
+        transform: none;
     }
 }
 
-/* 平板端优化 */
 @media (max-width: 1024px) {
     .piano-container {
         height: 140px;
@@ -218,7 +204,6 @@ body.hide-mode .key.selected.black {
         margin: 0 -9px;
     }
     
-    /* 修复：平板端选中状态尺寸与普通状态一致 */
     .selected.white {
         width: 28px !important;
     }
@@ -229,15 +214,4 @@ body.hide-mode .key.selected.black {
     }
 }
 
-/* 桌面端优化 - 修复：移除选中状态的尺寸覆盖 */
-@media (min-width: 1025px) {
-    /* 桌面端选中状态尺寸与普通状态一致 */
-    .selected.white {
-        width: 32px !important; /* 与普通白键一致 */
-    }
-    
-    .selected.black {
-        width: 20px !important; /* 与普通黑键一致 */
-        margin: 0 -10px !important;
-    }
-}
+/* 删除有冲突的桌面端媒体查询，让auto-device.css完全控制桌面视图样式 */
