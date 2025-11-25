@@ -71,7 +71,7 @@
     box-shadow: 0 0 12px rgba(255, 183, 77, 0.7) !important; /* 增强阴影效果 */
     /* 确保白键高亮不会溢出到黑键区域 */
     margin: 0;
-    width: 32px;
+    width: 32px; /* 基础宽度，会被设备特定样式覆盖 */
     z-index: 1; /* 保持白键在底层，不覆盖黑键 */
 }
 
@@ -82,7 +82,7 @@
     box-shadow: 0 0 15px rgba(255, 183, 77, 0.9) !important; /* 增强阴影效果 */
     /* 确保黑键的高亮不会扩展到相邻区域 */
     margin: 0 -10px !important;
-    width: 20px !important;
+    width: 20px !important; /* 基础宽度，会被设备特定样式覆盖 */
     z-index: 2; /* 黑键保持在上层 */
 }
 
@@ -218,6 +218,7 @@ body.hide-mode .key.selected.black {
         margin: 0 -9px;
     }
     
+    /* 修复：平板端选中状态尺寸与普通状态一致 */
     .selected.white {
         width: 28px !important;
     }
@@ -228,14 +229,15 @@ body.hide-mode .key.selected.black {
     }
 }
 
-/* 桌面端优化 */
+/* 桌面端优化 - 修复：移除选中状态的尺寸覆盖 */
 @media (min-width: 1025px) {
+    /* 桌面端选中状态尺寸与普通状态一致 */
     .selected.white {
-        width: 32px !important;
+        width: 32px !important; /* 与普通白键一致 */
     }
     
     .selected.black {
-        width: 20px !important;
+        width: 20px !important; /* 与普通黑键一致 */
         margin: 0 -10px !important;
     }
 }

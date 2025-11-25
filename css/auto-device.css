@@ -27,6 +27,16 @@
     margin: 0 -14px;
 }
 
+/* 修复：桌面视图下选中状态的尺寸 */
+.desktop-view .selected.white {
+    width: 45px !important; /* 与普通白键一致 */
+}
+
+.desktop-view .selected.black {
+    width: 28px !important; /* 与普通黑键一致 */
+    margin: 0 -14px !important;
+}
+
 .desktop-view .button-group {
     flex-wrap: nowrap;
 }
@@ -88,6 +98,16 @@
     margin: 0 -12px;
 }
 
+/* 修复：平板横屏视图下选中状态的尺寸 */
+.tablet-landscape-view .selected.white {
+    width: 38px !important; /* 与普通白键一致 */
+}
+
+.tablet-landscape-view .selected.black {
+    width: 24px !important; /* 与普通黑键一致 */
+    margin: 0 -12px !important;
+}
+
 .tablet-landscape-view .scroll-arrow {
     width: 45px;
     height: 45px;
@@ -147,6 +167,16 @@
     width: 18px;
     height: 80px;
     margin: 0 -9px;
+}
+
+/* 修复：移动端视图下选中状态的尺寸 */
+.mobile-view .selected.white {
+    width: 28px !important; /* 与普通白键一致 */
+}
+
+.mobile-view .selected.black {
+    width: 18px !important; /* 与普通黑键一致 */
+    margin: 0 -9px !important;
 }
 
 .mobile-view .note-display {
@@ -217,6 +247,16 @@
         margin: 0 -9px;
     }
 
+    /* 修复：小屏幕手机选中状态的尺寸 */
+    .selected.white {
+        width: 28px !important; /* 与普通白键一致 */
+    }
+    
+    .selected.black {
+        width: 18px !important; /* 与普通黑键一致 */
+        margin: 0 -9px !important;
+    }
+
     .note-display {
         max-width: 85px;
         padding: 10px;
@@ -246,7 +286,6 @@
     .solfege-sequence-input {
         font-size: 0.9rem;
     }
-
 
     .playback-btn {
         min-width: 70px;
