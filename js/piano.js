@@ -1010,18 +1010,29 @@ function parseValueWithReference(valueStr, referenceType, baseValue) {
 }
 
 
-// 格式化时间为分:秒
-function formatTime(seconds) {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-}
-
 // 更新进度条
 function updateProgressBar(currentTime, totalTime) {
     const progressPercent = (currentTime / totalTime) * 100;
     progressFill.style.width = `${progressPercent}%`;
-    progressTime.textContent = `${formatTime(currentTime)} / ${formatTime(totalTime)}`;
+    
+    // 使用新的格式化函数显示时间
+    const currentFormatted = formatSecondsByTotal(currentTime, totalTime);
+    const totalFormatted = formatSecondsByTotal(totalTime, totalTime);
+    progressTime.textContent = `${currentFormatted} / ${totalFormatted}`;
+}
+
+// 格式化为秒的函数
+function formatSecondsByTotal(seconds, totalSeconds) {
+    // 获取总时长的小数位数
+    const totalSecondsStr = totalSeconds.toString();
+    let decimalPlaces = 0;
+    
+    if (totalSecondsStr.includes('.')) {
+        decimalPlaces = totalSecondsStr.split('.')[1].length;
+    }
+    
+    // 格式化当前时间，保持与总时长相同的小数位数
+    return seconds.toFixed(decimalPlaces);
 }
 
 // 停止播放
