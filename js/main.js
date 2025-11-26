@@ -1,4 +1,3 @@
- 
 // 主题切换和应用主逻辑模块
 
 // 隐藏模式状态
@@ -8,16 +7,26 @@ let isHideMode = false;
 let durationRandomRange = 0.5; // 默认50%
 let velocityRandomRange = 0.5; // 默认50%
 
+// 全局变量用于存储当前设置状态
+let currentSettings = {
+    noteCount: 3,
+    randomMode: 'nonRepeat',
+    randomSolfegeCount: 3,
+    noteType: 'fixedDurationFixedVelocity',
+    noteDuration: 0.5,
+    noteVelocity: 100
+};
+
 // 初始化函数
 async function init() {
     try {
         // 首先初始化音源加载
         MessageUtils.showStatusMessage("正在初始化音源...");
         await initAudioLoad();
-        
+
         // 音源加载完成后继续其他初始化
         MessageUtils.showStatusMessage("音源加载完成，初始化界面...");
-        
+
         // 初始化主题管理器
         ThemeManager.init();
 
@@ -76,14 +85,75 @@ async function init() {
 
         // 初始验证
         checkAllValidations();
-        
+
         MessageUtils.showStatusMessage("初始化完成，可以开始使用");
-        
+
     } catch (error) {
         console.error("初始化失败:", error);
         MessageUtils.showError("初始化失败: " + error.message);
         // 即使失败也切换到主界面
         switchToMainInterface();
+    }
+}
+
+// 更新当前设置状态
+function updateCurrentSettings() {
+    currentSettings = {
+        noteCount: parseInt(noteCountInput.value) || 3,
+        randomMode: randomModeSelect.value,
+        randomSolfegeCount: parseInt(randomSolfegeCountInput.value) || 3,
+        noteType: noteTypeSelect.value,
+        noteDuration: parseFloat(document.getElementById('noteDuration').value) || 0.5,
+        noteVelocity: parseInt(document.getElementById('noteVelocity').value) || 100
+    };
+}
+
+// 检查设置是否改变并更新相关功能
+function checkAndUpdateSettings() {
+    const newSettings = {
+        noteCount: parseInt(noteCountInput.value) || 3,
+        randomMode: randomModeSelect.value,
+        randomSolfegeCount: parseInt(randomSolfegeCountInput.value) || 3,
+        noteType: noteTypeSelect.value,
+        noteDuration: parseFloat(document.getElementById('noteDuration').value) || 0.5,
+        noteVelocity: parseInt(document.getElementById('noteVelocity').value) || 100
+    };
+
+    // 检查设置是否改变
+    let settingsChanged = false;
+    for (const key in newSettings) {
+        if (newSettings[key] !== currentSettings[key]) {
+            settingsChanged = true;
+            break;
+        }
+    }
+
+    if (settingsChanged) {
+        updateCurrentSettings();
+        // 实时更新相关功能
+        updateFunctionsBasedOnSettings();
+    }
+}
+
+// 根据设置更新相关功能
+function updateFunctionsBasedOnSettings() {
+    // 更新随机唱名数量的最大值限制
+    randomSolfegeCountInput.max = currentSettings.noteCount;
+
+    // 如果随机唱名数量超过新的音符数量，自动调整
+    if (currentSettings.randomSolfegeCount > currentSettings.noteCount &&
+        currentSettings.randomMode === 'nonRepeat') {
+        randomSolfegeCountInput.value = currentSettings.noteCount;
+        currentSettings.randomSolfegeCount = currentSettings.noteCount;
+    }
+
+    // 更新按钮状态和验证
+    checkAllValidations();
+
+    // 更新显示区域（如果需要）
+    if (currentSettings.noteCount !== selectedNotes.length) {
+        // 音符数量改变时需要重新生成显示区域
+        generateNoteDisplays();
     }
 }
 
@@ -94,17 +164,15 @@ function toggleHideMode() {
     const hideModeBtn = document.getElementById('hideModeToggle');
 
     if (isHideMode) {
-        body.classList.add('hide-mode');  // 修改：添加hide-mode类
+        body.classList.add('hide-mode');
         hideModeBtn.textContent = '解除隐藏';
-        // 确保钢琴键标签也被隐藏
         document.querySelectorAll('.key-label').forEach(label => {
             label.style.display = 'none';
         });
         MessageUtils.showSuccess("已进入隐藏模式");
     } else {
-        body.classList.remove('hide-mode');  // 修改：移除hide-mode类
+        body.classList.remove('hide-mode');
         hideModeBtn.textContent = '开启隐藏';
-        // 恢复显示钢琴键标签
         document.querySelectorAll('.key-label').forEach(label => {
             label.style.display = 'block';
         });
@@ -114,16 +182,13 @@ function toggleHideMode() {
 
 // 格式化时值显示，尽量使用整数
 function formatDurationDisplay(duration) {
-    // 如果是整数，显示整数
     if (duration % 1 === 0) {
         return duration.toString();
     }
-    // 如果小数部分只有一位且不为0，显示一位小数
     const decimalPart = duration - Math.floor(duration);
     if (decimalPart * 10 % 1 === 0) {
         return duration.toFixed(1);
     }
-    // 否则显示两位小数
     return duration.toFixed(2);
 }
 
@@ -132,26 +197,21 @@ function parseSingleNote(item) {
     const parts = item.split('_');
     const result = {
         solfege: parts[0] || '',
-        duration: getNoteDuration(), // 默认使用固定时长
-        velocity: getDefaultVelocity() // 默认使用固定力度
+        duration: getNoteDuration(),
+        velocity: getDefaultVelocity()
     };
 
-    // 根据下划线数量判断参数显示情况
     if (parts.length === 1) {
-        // 只有唱名：使用固定时长和固定力度
         result.duration = getNoteDuration();
         result.velocity = getDefaultVelocity();
     } else if (parts.length === 2) {
-        // 唱名_时长：时长随机+力度固定模式
         result.duration = parseFloat(parts[1]) || getNoteDuration();
         result.velocity = getDefaultVelocity();
     } else if (parts.length === 3) {
         if (parts[1] === '') {
-            // 唱名__力度：时长固定+力度随机模式（跳过时长）
             result.duration = getNoteDuration();
             result.velocity = parseInt(parts[2]) || getDefaultVelocity();
         } else {
-            // 唱名_时长_力度：时长随机+力度随机模式
             result.duration = parseFloat(parts[1]) || getNoteDuration();
             result.velocity = parseInt(parts[2]) || getDefaultVelocity();
         }
@@ -160,7 +220,7 @@ function parseSingleNote(item) {
     return result;
 }
 
-// 在setupEventListeners函数中添加按钮点击事件设置
+// 在setupEventListeners函数中添加实时监听
 function setupEventListeners() {
     // 先设置按钮的禁用状态点击提示
     setupButtonClickHandlers();
@@ -171,17 +231,18 @@ function setupEventListeners() {
         if (ValidationUtils.validateNoteCount(value, getTotalKeys(), noteCountError)) {
             if (!isNaN(value)) {
                 updateNoteCount(value);
+                checkAndUpdateSettings(); // 实时检查设置变化
             }
         }
         checkAllValidations();
     });
 
-    // 输入时实时验证
     noteCountInput.addEventListener('input', () => {
         const value = noteCountInput.value === '' ? NaN : parseInt(noteCountInput.value);
         ValidationUtils.validateNoteCount(value, getTotalKeys(), noteCountError, true);
         if (!isNaN(value)) {
             randomSolfegeCountInput.max = value;
+            checkAndUpdateSettings(); // 实时检查设置变化
         }
         const solfegeValue = randomSolfegeCountInput.value === '' ? NaN : parseInt(randomSolfegeCountInput.value);
         ValidationUtils.validateRandomSolfegeCount(solfegeValue, randomModeSelect.value, parseInt(noteCountInput.value), randomSolfegeCountError);
@@ -192,6 +253,14 @@ function setupEventListeners() {
     randomSolfegeCountInput.addEventListener('change', () => {
         const value = randomSolfegeCountInput.value === '' ? NaN : parseInt(randomSolfegeCountInput.value);
         ValidationUtils.validateRandomSolfegeCount(value, randomModeSelect.value, parseInt(noteCountInput.value), randomSolfegeCountError);
+        checkAndUpdateSettings(); // 实时检查设置变化
+        checkAllValidations();
+    });
+
+    randomSolfegeCountInput.addEventListener('input', () => {
+        const value = randomSolfegeCountInput.value === '' ? NaN : parseInt(randomSolfegeCountInput.value);
+        ValidationUtils.validateRandomSolfegeCount(value, randomModeSelect.value, parseInt(noteCountInput.value), randomSolfegeCountError);
+        checkAndUpdateSettings(); // 实时检查设置变化
         checkAllValidations();
     });
 
@@ -199,18 +268,14 @@ function setupEventListeners() {
     randomModeSelect.addEventListener('change', () => {
         const value = randomSolfegeCountInput.value === '' ? NaN : parseInt(randomSolfegeCountInput.value);
         ValidationUtils.validateRandomSolfegeCount(value, randomModeSelect.value, parseInt(noteCountInput.value), randomSolfegeCountError);
+        checkAndUpdateSettings(); // 实时检查设置变化
         checkAllValidations();
     });
 
-    randomSolfegeCountInput.addEventListener('input', () => {
-        const value = randomSolfegeCountInput.value === '' ? NaN : parseInt(randomSolfegeCountInput.value);
-        ValidationUtils.validateRandomSolfegeCount(value, randomModeSelect.value, parseInt(noteCountInput.value), randomSolfegeCountError);
-        checkAllValidations();
-    });
-
-    // 新增：音符类型变化监听
+    // 音符类型变化监听
     const noteTypeSelect = document.getElementById('noteType');
     noteTypeSelect.addEventListener('change', () => {
+        checkAndUpdateSettings(); // 实时检查设置变化
         checkAllValidations();
     });
 
@@ -218,11 +283,10 @@ function setupEventListeners() {
     const noteDurationInput = document.getElementById('noteDuration');
     const noteDurationError = document.getElementById('noteDurationError');
 
-    // 新增：音符力度输入验证
+    // 音符力度输入验证
     const noteVelocityInput = document.getElementById('noteVelocity');
     const noteVelocityError = document.getElementById('noteVelocityError');
 
-    // 格式化显示音符时值
     function formatNoteDurationDisplay() {
         const value = noteDurationInput.value === '' ? NaN : parseFloat(noteDurationInput.value);
         if (!isNaN(value)) {
@@ -235,60 +299,76 @@ function setupEventListeners() {
         if (ValidationUtils.validateNoteDuration(value, noteDurationError)) {
             formatNoteDurationDisplay();
         }
+        checkAndUpdateSettings(); // 实时检查设置变化
         checkAllValidations();
     });
 
     noteDurationInput.addEventListener('input', () => {
         const value = noteDurationInput.value === '' ? NaN : parseFloat(noteDurationInput.value);
         ValidationUtils.validateNoteDuration(value, noteDurationError);
+        checkAndUpdateSettings(); // 实时检查设置变化
         checkAllValidations();
     });
 
-    // 新增力度验证
-noteVelocityInput.addEventListener('input', () => {
-    const value = noteVelocityInput.value === '' ? NaN : parseInt(noteVelocityInput.value);
-    // 移除第三个参数true，因为validateNoteVelocity函数已经修改为总是显示错误
-    ValidationUtils.validateNoteVelocity(value, noteVelocityError);
-    checkAllValidations();
-});
+    // 力度验证
+    noteVelocityInput.addEventListener('input', () => {
+        const value = noteVelocityInput.value === '' ? NaN : parseInt(noteVelocityInput.value);
+        ValidationUtils.validateNoteVelocity(value, noteVelocityError);
+        checkAndUpdateSettings(); // 实时检查设置变化
+        checkAllValidations();
+    });
 
-noteVelocityInput.addEventListener('change', () => {
-    const value = noteVelocityInput.value === '' ? NaN : parseInt(noteVelocityInput.value);
-    ValidationUtils.validateNoteVelocity(value, noteVelocityError);
-    checkAllValidations();
-});
+    noteVelocityInput.addEventListener('change', () => {
+        const value = noteVelocityInput.value === '' ? NaN : parseInt(noteVelocityInput.value);
+        ValidationUtils.validateNoteVelocity(value, noteVelocityError);
+        checkAndUpdateSettings(); // 实时检查设置变化
+        checkAllValidations();
+    });
+
+    // 唱名序列输入框变化监听
+    const solfegeSequenceInput = document.getElementById('solfegeSequence');
+    solfegeSequenceInput.addEventListener('input', () => {
+        checkAllValidations(); // 实时验证唱名序列
+    });
 
     // 初始格式化显示
     formatNoteDurationDisplay();
 
-    // 新增：时值随机范围旋钮事件监听
+    // 时值随机范围旋钮事件监听
     document.getElementById('durationRandomRangeKnob').addEventListener('click', (e) => {
         handleRandomRangeKnobClick(e, 'duration');
+        checkAndUpdateSettings(); // 实时检查设置变化
     });
 
     document.getElementById('durationRandomRangeDecrease').addEventListener('click', () => {
         setDurationRandomRange(Math.max(0.1, durationRandomRange - 0.1));
+        checkAndUpdateSettings(); // 实时检查设置变化
     });
 
     document.getElementById('durationRandomRangeIncrease').addEventListener('click', () => {
         setDurationRandomRange(Math.min(1.0, durationRandomRange + 0.1));
+        checkAndUpdateSettings(); // 实时检查设置变化
     });
 
-    // 新增：力度随机范围旋钮事件监听
+    // 力度随机范围旋钮事件监听
     document.getElementById('velocityRandomRangeKnob').addEventListener('click', (e) => {
         handleRandomRangeKnobClick(e, 'velocity');
+        checkAndUpdateSettings(); // 实时检查设置变化
     });
 
     document.getElementById('velocityRandomRangeDecrease').addEventListener('click', () => {
         setVelocityRandomRange(Math.max(0.1, velocityRandomRange - 0.1));
+        checkAndUpdateSettings(); // 实时检查设置变化
     });
 
     document.getElementById('velocityRandomRangeIncrease').addEventListener('click', () => {
         setVelocityRandomRange(Math.min(1.0, velocityRandomRange + 0.1));
+        checkAndUpdateSettings(); // 实时检查设置变化
     });
 
     // 初始验证
     checkAllValidations();
+    updateCurrentSettings(); // 初始化当前设置
 }
 
 // 检查所有验证是否通过
@@ -303,17 +383,16 @@ function checkAllValidations() {
     const noteDurationValid = ValidationUtils.validateNoteDuration(noteDurationValue, document.getElementById('noteDurationError'));
     const noteVelocityValid = ValidationUtils.validateNoteVelocity(noteVelocityValue, document.getElementById('noteVelocityError'));
 
-
-    const notesSelected = selectedNotes.length === noteCount;
+    const notesSelected = selectedNotes.length === currentSettings.noteCount;
 
     let allSolfegeFilled = true;
     let hasDuplicateSolfege = false;
 
-    for (let i = 0; i < noteCount; i++) {
+    for (let i = 0; i < currentSettings.noteCount; i++) {
         if (!solfegeLabels[i] || solfegeLabels[i].trim() === '') {
             allSolfegeFilled = false;
         } else {
-            for (let j = 0; j < noteCount; j++) {
+            for (let j = 0; j < currentSettings.noteCount; j++) {
                 if (i !== j && solfegeLabels[j] &&
                     solfegeLabels[i].toLowerCase() === solfegeLabels[j].toLowerCase()) {
                     hasDuplicateSolfege = true;
@@ -324,8 +403,12 @@ function checkAllValidations() {
         if (hasDuplicateSolfege) break;
     }
 
+    // 检查唱名序列输入是否有效
+    const solfegeSequence = document.getElementById('solfegeSequence').value.trim();
+    const isSolfegeSequenceValid = solfegeSequence === '' || parseSolfegeSequence(solfegeSequence).length > 0;
+
     const playbackButtonsEnabled = noteCountValid && solfegeCountValid && noteDurationValid && noteVelocityValid &&
-        notesSelected && allSolfegeFilled && !hasDuplicateSolfege;
+        notesSelected && allSolfegeFilled && !hasDuplicateSolfege && isSolfegeSequenceValid;
 
     const playButtonEnabled = notesSelected;
 
@@ -353,8 +436,7 @@ function setupButtonClickHandlers() {
         const newButton = button.cloneNode(true);
         button.parentNode.replaceChild(newButton, button);
 
-        // 为新按钮添加事件监听器
-        document.getElementById(buttonInfo.id).addEventListener('click', function(e) {
+        document.getElementById(buttonInfo.id).addEventListener('click', function (e) {
             if (this.disabled) {
                 e.preventDefault();
                 e.stopPropagation();
@@ -382,22 +464,22 @@ function setupButtonClickHandlers() {
 
                     if (isNaN(noteDurationValue) || noteDurationValue < 0 || noteDurationValue > 4) {
                         reason = "请先输入有效的音符时长（0-4秒）";
-                    } 
+                    }
 
                     if (isNaN(noteVelocityValue) || noteVelocityValue < 0 || noteVelocityValue > 127) {
                         reason = "请先输入有效的音符力度（0-127）";
-                    } else if (selectedNotes.length !== noteCount) {
-                        reason = "请先选择所有" + noteCount + "个音符";
+                    } else if (selectedNotes.length !== currentSettings.noteCount) {
+                        reason = "请先选择所有" + currentSettings.noteCount + "个音符";
                     } else {
                         let missingSolfege = false;
                         let duplicateSolfege = false;
 
-                        for (let i = 0; i < noteCount; i++) {
+                        for (let i = 0; i < currentSettings.noteCount; i++) {
                             if (!solfegeLabels[i] || solfegeLabels[i].trim() === '') {
                                 missingSolfege = true;
                                 break;
                             } else {
-                                for (let j = 0; j < noteCount; j++) {
+                                for (let j = 0; j < currentSettings.noteCount; j++) {
                                     if (i !== j && solfegeLabels[j] &&
                                         solfegeLabels[i].toLowerCase() === solfegeLabels[j].toLowerCase()) {
                                         duplicateSolfege = true;
@@ -419,7 +501,6 @@ function setupButtonClickHandlers() {
                 MessageUtils.showAlert(reason);
                 return false;
             } else {
-                // 按钮启用时执行对应的处理函数
                 buttonInfo.handler.call(this);
             }
         });
@@ -432,7 +513,6 @@ function setupButtonClickHandlers() {
     document.getElementById('resetBtn').addEventListener('click', resetSelection);
 }
 
-
 // 新增：处理随机范围旋钮点击
 function handleRandomRangeKnobClick(e, type) {
     const knob = e.currentTarget;
@@ -440,12 +520,10 @@ function handleRandomRangeKnobClick(e, type) {
     const centerX = rect.left + rect.width / 2;
     const centerY = rect.top + rect.height / 2;
 
-    // 计算角度 (0-360度)
     const angle = Math.atan2(e.clientY - centerY, e.clientX - centerX) * (180 / Math.PI);
     const normalizedAngle = (angle + 360) % 360;
 
-    // 将角度映射到10%-100%范围（10%步长）
-    const steps = 10; // 10%, 20%, ..., 100%
+    const steps = 10;
     const stepAngle = 360 / steps;
     const step = Math.round(normalizedAngle / stepAngle);
     const newValue = Math.max(0.1, Math.min(1.0, (step / steps) || 0.1));
@@ -459,7 +537,7 @@ function handleRandomRangeKnobClick(e, type) {
 
 // 新增：设置时值随机范围
 function setDurationRandomRange(value) {
-    durationRandomRange = Math.round(value * 10) / 10; // 确保是0.1的倍数
+    durationRandomRange = Math.round(value * 10) / 10;
     document.getElementById('durationRandomRangeValue').textContent = Math.round(durationRandomRange * 100) + '%';
     updateRandomRangeKnobIndicators();
     MessageUtils.showStatusMessage(`时值随机范围已设置为 ${Math.round(durationRandomRange * 100)}% (以基础时值为中心)`);
@@ -467,7 +545,7 @@ function setDurationRandomRange(value) {
 
 // 新增：设置力度随机范围
 function setVelocityRandomRange(value) {
-    velocityRandomRange = Math.round(value * 10) / 10; // 确保是0.1的倍数
+    velocityRandomRange = Math.round(value * 10) / 10;
     document.getElementById('velocityRandomRangeValue').textContent = Math.round(velocityRandomRange * 100) + '%';
     updateRandomRangeKnobIndicators();
     MessageUtils.showStatusMessage(`力度随机范围已设置为 ${Math.round(velocityRandomRange * 100)}% (以基础力度为中心)`);
@@ -475,12 +553,10 @@ function setVelocityRandomRange(value) {
 
 // 新增：更新随机范围旋钮指示器
 function updateRandomRangeKnobIndicators() {
-    // 时值随机范围旋钮：10%-100%映射到0-360度
     const durationAngle = ((durationRandomRange - 0.1) / 0.9) * 360;
     document.getElementById('durationRandomRangeIndicator').style.transform =
         `translateX(-50%) rotate(${durationAngle}deg)`;
 
-    // 力度随机范围旋钮：10%-100%映射到0-360度
     const velocityAngle = ((velocityRandomRange - 0.1) / 0.9) * 360;
     document.getElementById('velocityRandomRangeIndicator').style.transform =
         `translateX(-50%) rotate(${velocityAngle}deg)`;
