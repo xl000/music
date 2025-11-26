@@ -114,17 +114,7 @@ function toggleHideMode() {
 
 // 格式化时值显示，尽量使用整数
 function formatDurationDisplay(duration) {
-    // 如果是整数，显示整数
-    if (duration % 1 === 0) {
-        return duration.toString();
-    }
-    // 如果小数部分只有一位且不为0，显示一位小数
-    const decimalPart = duration - Math.floor(duration);
-    if (decimalPart * 10 % 1 === 0) {
-        return duration.toFixed(1);
-    }
-    // 否则显示两位小数
-    return duration.toFixed(2);
+    return parseFloat(duration).toString();
 }
 
 // 解析单个音项（支持最小代价显示格式）
@@ -171,7 +161,7 @@ function setupEventListeners() {
         if (ValidationUtils.validateNoteCount(value, getTotalKeys(), noteCountError)) {
             if (!isNaN(value)) {
                 updateNoteCount(value);
-                // 新增：当随机方式为"不允许重复音"时，同步随机唱名数量
+                // 当随机方式为"不允许重复音"时，同步随机唱名数量
                 if (randomModeSelect.value === 'nonRepeat') {
                     randomSolfegeCountInput.value = value;
                     // 触发验证
@@ -189,7 +179,7 @@ function setupEventListeners() {
         ValidationUtils.validateNoteCount(value, getTotalKeys(), noteCountError, true);
         if (!isNaN(value)) {
             randomSolfegeCountInput.max = value;
-            // 新增：当随机方式为"不允许重复音"时，实时同步随机唱名数量
+            // 当随机方式为"不允许重复音"时，实时同步随机唱名数量
             if (randomModeSelect.value === 'nonRepeat') {
                 randomSolfegeCountInput.value = value;
                 // 触发实时验证
@@ -216,7 +206,7 @@ function setupEventListeners() {
         
         ValidationUtils.validateRandomSolfegeCount(value, randomModeSelect.value, noteCountValue, randomSolfegeCountError);
         
-        // 新增：当切换到"不允许重复音"模式时，自动同步随机唱名数量
+        // 当切换到"不允许重复音"模式时，自动同步随机唱名数量
         if (randomModeSelect.value === 'nonRepeat' && !isNaN(noteCountValue)) {
             randomSolfegeCountInput.value = noteCountValue;
             // 重新验证
@@ -285,7 +275,7 @@ noteVelocityInput.addEventListener('change', () => {
     // 初始格式化显示
     formatNoteDurationDisplay();
 
-    // 新增：时值随机范围旋钮事件监听
+    // 时值随机范围旋钮事件监听
     document.getElementById('durationRandomRangeKnob').addEventListener('click', (e) => {
         handleRandomRangeKnobClick(e, 'duration');
     });
@@ -298,7 +288,7 @@ noteVelocityInput.addEventListener('change', () => {
         setDurationRandomRange(Math.min(1.0, durationRandomRange + 0.1));
     });
 
-    // 新增：力度随机范围旋钮事件监听
+    // 力度随机范围旋钮事件监听
     document.getElementById('velocityRandomRangeKnob').addEventListener('click', (e) => {
         handleRandomRangeKnobClick(e, 'velocity');
     });
@@ -457,7 +447,7 @@ function setupButtonClickHandlers() {
 }
 
 
-// 新增：处理随机范围旋钮点击
+// 处理随机范围旋钮点击
 function handleRandomRangeKnobClick(e, type) {
     const knob = e.currentTarget;
     const rect = knob.getBoundingClientRect();
@@ -481,7 +471,7 @@ function handleRandomRangeKnobClick(e, type) {
     }
 }
 
-// 新增：设置时值随机范围
+// 设置时值随机范围
 function setDurationRandomRange(value) {
     durationRandomRange = Math.round(value * 10) / 10; // 确保是0.1的倍数
     document.getElementById('durationRandomRangeValue').textContent = Math.round(durationRandomRange * 100) + '%';
@@ -489,7 +479,7 @@ function setDurationRandomRange(value) {
     MessageUtils.showStatusMessage(`时值随机范围已设置为 ${Math.round(durationRandomRange * 100)}% (以基础时值为中心)`);
 }
 
-// 新增：设置力度随机范围
+// 设置力度随机范围
 function setVelocityRandomRange(value) {
     velocityRandomRange = Math.round(value * 10) / 10; // 确保是0.1的倍数
     document.getElementById('velocityRandomRangeValue').textContent = Math.round(velocityRandomRange * 100) + '%';
@@ -497,7 +487,7 @@ function setVelocityRandomRange(value) {
     MessageUtils.showStatusMessage(`力度随机范围已设置为 ${Math.round(velocityRandomRange * 100)}% (以基础力度为中心)`);
 }
 
-// 新增：更新随机范围旋钮指示器
+// 更新随机范围旋钮指示器
 function updateRandomRangeKnobIndicators() {
     // 时值随机范围旋钮：10%-100%映射到0-360度
     const durationAngle = ((durationRandomRange - 0.1) / 0.9) * 360;
