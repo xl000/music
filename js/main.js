@@ -114,7 +114,21 @@ function toggleHideMode() {
 
 // 格式化时值显示，尽量使用整数
 function formatDurationDisplay(duration) {
-    return parseFloat(duration).toString();
+    // 先四舍五入到最多三位小数
+    const rounded = Math.round(duration * 1000) / 1000;
+    
+    // 转换为字符串并去掉多余的0
+    let result = rounded.toString();
+    
+    // 如果包含小数点，去掉末尾的0
+    if (result.includes('.')) {
+        result = result.replace(/0+$/, ''); // 去掉末尾的0
+        if (result.endsWith('.')) {
+            result = result.slice(0, -1); // 如果以小数点结尾，去掉小数点
+        }
+    }
+    
+    return result;
 }
 
 // 解析单个音项（支持最小代价显示格式）

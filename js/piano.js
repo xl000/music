@@ -229,7 +229,10 @@ function getRandomDuration() {
     const minDuration = Math.max(0.1, baseDuration - lowerRange); // 最小时值
     const maxDurationValue = Math.min(maxDuration, baseDuration + upperRange); // 最大时值
     
-    return minDuration + Math.random() * (maxDurationValue - minDuration);
+    // 生成随机时长并保留最多3位小数
+     const randomDuration = minDuration + Math.random() * (maxDurationValue - minDuration);
+     return Math.round(randomDuration * 1000) / 1000; // 保留3位小数
+ 
 }
 
 // 修改现有的getRandomVelocity函数，加入随机范围控制
