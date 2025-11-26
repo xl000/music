@@ -52,7 +52,7 @@ const ValidationUtils = {
         }
     },
 
-    // 新增：验证音符时长
+    // 验证音符时长
     validateNoteDuration(value, errorElement) {
         if (isNaN(value) || value === '' || value === null) {
             this.showError(errorElement, "请输入有效数字");

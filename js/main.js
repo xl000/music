@@ -171,6 +171,13 @@ function setupEventListeners() {
         if (ValidationUtils.validateNoteCount(value, getTotalKeys(), noteCountError)) {
             if (!isNaN(value)) {
                 updateNoteCount(value);
+                // 新增：当随机方式为"不允许重复音"时，同步随机唱名数量
+                if (randomModeSelect.value === 'nonRepeat') {
+                    randomSolfegeCountInput.value = value;
+                    // 触发验证
+                    const solfegeValue = randomSolfegeCountInput.value === '' ? NaN : parseInt(randomSolfegeCountInput.value);
+                    ValidationUtils.validateRandomSolfegeCount(solfegeValue, randomModeSelect.value, value, randomSolfegeCountError);
+                }
             }
         }
         checkAllValidations();
@@ -182,6 +189,13 @@ function setupEventListeners() {
         ValidationUtils.validateNoteCount(value, getTotalKeys(), noteCountError, true);
         if (!isNaN(value)) {
             randomSolfegeCountInput.max = value;
+            // 新增：当随机方式为"不允许重复音"时，实时同步随机唱名数量
+            if (randomModeSelect.value === 'nonRepeat') {
+                randomSolfegeCountInput.value = value;
+                // 触发实时验证
+                const solfegeValue = randomSolfegeCountInput.value === '' ? NaN : parseInt(randomSolfegeCountInput.value);
+                ValidationUtils.validateRandomSolfegeCount(solfegeValue, randomModeSelect.value, value, randomSolfegeCountError, true);
+            }
         }
         const solfegeValue = randomSolfegeCountInput.value === '' ? NaN : parseInt(randomSolfegeCountInput.value);
         ValidationUtils.validateRandomSolfegeCount(solfegeValue, randomModeSelect.value, parseInt(noteCountInput.value), randomSolfegeCountError);
@@ -195,10 +209,20 @@ function setupEventListeners() {
         checkAllValidations();
     });
 
-    // 随机方式变化实时验证
+    // 随机方式变化实时验证和同步
     randomModeSelect.addEventListener('change', () => {
         const value = randomSolfegeCountInput.value === '' ? NaN : parseInt(randomSolfegeCountInput.value);
-        ValidationUtils.validateRandomSolfegeCount(value, randomModeSelect.value, parseInt(noteCountInput.value), randomSolfegeCountError);
+        const noteCountValue = noteCountInput.value === '' ? NaN : parseInt(noteCountInput.value);
+        
+        ValidationUtils.validateRandomSolfegeCount(value, randomModeSelect.value, noteCountValue, randomSolfegeCountError);
+        
+        // 新增：当切换到"不允许重复音"模式时，自动同步随机唱名数量
+        if (randomModeSelect.value === 'nonRepeat' && !isNaN(noteCountValue)) {
+            randomSolfegeCountInput.value = noteCountValue;
+            // 重新验证
+            ValidationUtils.validateRandomSolfegeCount(noteCountValue, randomModeSelect.value, noteCountValue, randomSolfegeCountError);
+        }
+        
         checkAllValidations();
     });
 
@@ -208,7 +232,7 @@ function setupEventListeners() {
         checkAllValidations();
     });
 
-    // 新增：音符类型变化监听
+    // 音符类型变化监听
     const noteTypeSelect = document.getElementById('noteType');
     noteTypeSelect.addEventListener('change', () => {
         checkAllValidations();
@@ -218,7 +242,7 @@ function setupEventListeners() {
     const noteDurationInput = document.getElementById('noteDuration');
     const noteDurationError = document.getElementById('noteDurationError');
 
-    // 新增：音符力度输入验证
+    // 音符力度输入验证
     const noteVelocityInput = document.getElementById('noteVelocity');
     const noteVelocityError = document.getElementById('noteVelocityError');
 
