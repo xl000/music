@@ -232,7 +232,6 @@ function getRandomDuration() {
     // 生成随机时长并保留最多3位小数
     const randomDuration = minDuration + Math.random() * (maxDurationValue - minDuration);
     return Math.round(randomDuration * 1000) / 1000; // 保留3位小数
-
 }
 
 // 修改现有的getRandomVelocity函数，加入随机范围控制
@@ -840,7 +839,7 @@ function parseSingleNote(item) {
     const parts = item.split('_');
     const result = {
         solfege: parts[0] || '',
-        duration: getNoteDuration(),
+        duration: parseFloat(getNoteDuration().toFixed(3)), // 保留3位小数
         velocity: getDefaultVelocity()
     };
 
@@ -867,7 +866,7 @@ function parseChord(chordStr) {
         const parts = note.split('_');
         const result = {
             solfege: parts[0] || '',
-            duration: getNoteDuration(),
+            duration: parseFloat(getNoteDuration().toFixed(3)), // 保留3位小数
             velocity: getDefaultVelocity()
         };
 
@@ -948,14 +947,14 @@ function parseSolfegeSequence(input) {
             // 空闲项
             parsedSequence.push({
                 solfege: null,
-                duration: getNoteDuration(),
+                duration: parseFloat(getNoteDuration().toFixed(3)), // 保留3位小数
                 velocity: getDefaultVelocity(),
                 isRest: true
             });
         } else if (item.startsWith('_')) {
             // 只有时长的空闲
             const parts = item.split('_');
-            let duration = getNoteDuration();
+            let duration = parseFloat(getNoteDuration().toFixed(3)); // 保留3位小数
 
             // 解析时长部分（支持t引用）
             if (parts.length >= 2 && parts[1] !== '') {
@@ -987,11 +986,11 @@ function parseSolfegeSequence(input) {
 
 // 解析带引用的数值（支持t和f引用）
 function parseValueWithReference(valueStr, referenceType, baseValue) {
-    if (!valueStr) return baseValue;
+    if (!valueStr) return parseFloat(baseValue.toFixed(3));
 
-    // 如果直接是引用符号，返回基准值
+    // 如果直接是引用符号，返回基准值（保留3位小数）
     if (valueStr === referenceType) {
-        return baseValue;
+        return parseFloat(baseValue.toFixed(3));
     }
 
     // 检查是否包含引用符号（如2t, 0.5f等）
@@ -1000,13 +999,13 @@ function parseValueWithReference(valueStr, referenceType, baseValue) {
         const multiplier = parseFloat(multiplierStr);
 
         if (!isNaN(multiplier)) {
-            return baseValue * multiplier;
+            return parseFloat((baseValue * multiplier).toFixed(3));
         }
     }
 
-    // 如果是纯数字，直接解析
+    // 如果是纯数字，直接解析并保留3位小数
     const numericValue = parseFloat(valueStr);
-    return isNaN(numericValue) ? baseValue : numericValue;
+    return isNaN(numericValue) ? parseFloat(baseValue.toFixed(3)) : parseFloat(numericValue.toFixed(3));
 }
 
 
@@ -1272,11 +1271,11 @@ async function playSolfegeSequence() {
     currentPlaybackIndex = 0;
 
     // 计算总时长
-    totalPlaybackDuration = parsedSequence.reduce((total, item) => {
+    totalPlaybackDuration = parseFloat(parsedSequence.reduce((total, item) => {
         if (item.isRest) return total + item.duration;
         if (item.isChord) return total + Math.max(...item.chord.map(note => note.duration));
         return total + item.duration;
-    }, 0);
+    }, 0).toFixed(3)); // 保留3位小数
 
     playbackStartTime = Date.now();
 
