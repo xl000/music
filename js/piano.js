@@ -13,10 +13,10 @@ const blackKeys = ["C#", "D#", "F#", "G#", "A#"];
 // 音源配置 - 只使用本地音源
 const soundFiles = {
     "A0": "A0.mp3",
-    "C1": "C1.mp3", 
+    "C1": "C1.mp3",
     "A1": "A1.mp3",
     "C2": "C2.mp3",
-    "A2": "A2.mp3", 
+    "A2": "A2.mp3",
     "C3": "C3.mp3",
     "A3": "A3.mp3",
     "C4": "C4.mp3",
@@ -42,7 +42,7 @@ function initAudioLoad() {
     return new Promise((resolve, reject) => {
         // 更新加载状态
         updateLoadProgress(0, "开始加载音源...");
-        
+
         // 创建采样器 - 只使用本地音源
         sampler = new Tone.Sampler({
             urls: soundFiles,
@@ -68,7 +68,7 @@ function initAudioLoad() {
                 reject(error);
             }
         }).toDestination();
-        
+
         // 模拟加载进度
         simulateLoadProgress();
     });
@@ -80,7 +80,7 @@ function switchToMainInterface() {
     // 确保音频状态正确设置
     window.isAudioLoaded = isAudioLoaded;
     window.loadProgress = 100;
-    
+
     // 更新状态消息
     if (typeof MessageUtils !== 'undefined') {
         MessageUtils.showStatusMessage("音源加载完成，可以开始使用");
@@ -95,7 +95,7 @@ function simulateLoadProgress() {
             clearInterval(interval);
             return;
         }
-        
+
         progress += Math.random() * 5;
         if (progress < 90) {
             updateLoadProgress(progress, `正在加载音源文件... (${Math.round(progress)}%)`);
@@ -108,11 +108,11 @@ function simulateLoadProgress() {
 // 更新加载进度
 function updateLoadProgress(percent, message) {
     loadProgress = Math.min(100, Math.max(0, percent));
-    
+
     const progressBar = document.getElementById('globalProgressBar');
     const progressText = document.getElementById('progressText');
     const loadingDetails = document.getElementById('loadingDetails');
-    
+
     if (progressBar) {
         progressBar.style.width = loadProgress + '%';
     }
@@ -122,7 +122,7 @@ function updateLoadProgress(percent, message) {
     if (loadingDetails) {
         loadingDetails.textContent = message;
     }
-    
+
     // 更新全局状态
     window.loadProgress = loadProgress;
 }
@@ -220,34 +220,34 @@ function getNoteDuration() {
 function getRandomDuration() {
     const baseDuration = getNoteDuration(); // 获取基础时值
     const maxDuration = 4.0; // 最大时值
-    
+
     // 计算上下区间范围
     const lowerRange = baseDuration * durationRandomRange; // 下区间范围
     const upperRange = (maxDuration - baseDuration) * durationRandomRange; // 上区间范围
-    
+
     // 计算随机范围
     const minDuration = Math.max(0.1, baseDuration - lowerRange); // 最小时值
     const maxDurationValue = Math.min(maxDuration, baseDuration + upperRange); // 最大时值
-    
+
     // 生成随机时长并保留最多3位小数
-     const randomDuration = minDuration + Math.random() * (maxDurationValue - minDuration);
-     return Math.round(randomDuration * 1000) / 1000; // 保留3位小数
- 
+    const randomDuration = minDuration + Math.random() * (maxDurationValue - minDuration);
+    return Math.round(randomDuration * 1000) / 1000; // 保留3位小数
+
 }
 
 // 修改现有的getRandomVelocity函数，加入随机范围控制
 function getRandomVelocity() {
     const baseVelocity = getDefaultVelocity(); // 获取基础力度
     const maxVelocity = 127; // 最大力度
-    
+
     // 计算上下区间范围
     const lowerRange = baseVelocity * velocityRandomRange; // 下区间范围
     const upperRange = (maxVelocity - baseVelocity) * velocityRandomRange; // 上区间范围
-    
+
     // 计算随机范围
     const minVelocity = Math.max(0, baseVelocity - lowerRange); // 最小力度
     const maxVelocityValue = Math.min(maxVelocity, baseVelocity + upperRange); // 最大力度
-    
+
     return Math.floor(minVelocity + Math.random() * (maxVelocityValue - minVelocity + 1));
 }
 
@@ -331,7 +331,7 @@ function createPiano() {
                 e.preventDefault();
                 touchStartTime = Date.now();
                 isTouchMoving = false;
-                
+
                 // 双击检测
                 const currentTime = new Date().getTime();
                 const tapLength = currentTime - lastTapTime;
@@ -352,7 +352,7 @@ function createPiano() {
                         lastTapTime = 0;
                     }, 500);
                 }
-                
+
                 if (!isAudioReady()) {
                     MessageUtils.showWarning("音频尚未加载完成，请稍候");
                     return;
@@ -387,16 +387,16 @@ function createPiano() {
 function handleNoteSelection(fullNote) {
     // 检查是否已经选中该音符
     const noteIndex = selectedNotes.indexOf(fullNote);
-    
+
     if (noteIndex !== -1) {
         // 如果已经选中，则取消选择（移除）
         selectedNotes.splice(noteIndex, 1);
-        
+
         // 同时移除对应的唱名标签
         if (solfegeLabels[noteIndex]) {
             delete solfegeLabels[noteIndex];
         }
-        
+
         // 重新索引solfegeLabels（可选，保持连续性）
         const newSolfegeLabels = {};
         Object.keys(solfegeLabels).forEach((key, index) => {
@@ -407,7 +407,7 @@ function handleNoteSelection(fullNote) {
             }
         });
         solfegeLabels = newSolfegeLabels;
-        
+
     } else {
         // 如果没有选中，则添加选择
         if (selectedNotes.length < noteCount) {
@@ -417,7 +417,7 @@ function handleNoteSelection(fullNote) {
             return;
         }
     }
-    
+
     updateSelectedNotesDisplay();
     highlightSelectedKeys();
     generateNoteDisplays(); // 重新生成显示区域以更新唱名输入框
@@ -441,10 +441,10 @@ async function handleKeyPress(fullNote, key) {
         // 播放音符 - 持续发声直到释放
         const velocity = getDefaultVelocity() / 127;
         getSampler().triggerAttack(fullNote, undefined, velocity);
-        
+
         // 存储当前播放的音符以便释放
         key._currentNote = fullNote;
-        
+
     } catch (error) {
         console.error("播放错误:", error);
         MessageUtils.showError("播放错误：" + error.message);
@@ -707,7 +707,7 @@ async function playRandomSequence() {
 
         // 根据显示规则构建序列项
         let sequenceItem = solfege;
-        
+
         if (showDuration && showVelocity) {
             // 显示时长和力度
             sequenceItem += `_${formatDurationDisplay(duration)}_${velocity}`;
@@ -835,7 +835,7 @@ function applyPitchShift(noteName, octaveShift, pitchShift) {
     return noteMap[noteIndex] + octave;
 }
 
-// 解析单个音项
+// 解析单个音项，支持t和f引用
 function parseSingleNote(item) {
     const parts = item.split('_');
     const result = {
@@ -844,24 +844,45 @@ function parseSingleNote(item) {
         velocity: getDefaultVelocity()
     };
 
+    // 解析时长部分（支持t引用）
     if (parts.length >= 2 && parts[1] !== '') {
-        result.duration = parseFloat(parts[1]) || getNoteDuration();
+        result.duration = parseValueWithReference(parts[1], 't', getNoteDuration());
     }
 
+    // 解析力度部分（支持f引用）
     if (parts.length >= 3 && parts[2] !== '') {
-        result.velocity = parseInt(parts[2]) || getDefaultVelocity();
+        result.velocity = parseValueWithReference(parts[2], 'f', getDefaultVelocity());
     }
 
     return result;
 }
 
-// 解析和弦
+// 解析和弦（需要修改以支持t和f引用）
 function parseChord(chordStr) {
     // 移除括号并分割
     const inner = chordStr.replace(/[()（）]/g, '');
     const notes = inner.split(/[，,]/).map(note => note.trim()).filter(note => note !== '');
 
-    return notes.map(note => parseSingleNote(note));
+    return notes.map(note => {
+        const parts = note.split('_');
+        const result = {
+            solfege: parts[0] || '',
+            duration: getNoteDuration(),
+            velocity: getDefaultVelocity()
+        };
+
+        // 解析时长部分（支持t引用）
+        if (parts.length >= 2 && parts[1] !== '') {
+            result.duration = parseValueWithReference(parts[1], 't', getNoteDuration());
+        }
+
+        // 解析力度部分（支持f引用）
+        if (parts.length >= 3 && parts[2] !== '') {
+            result.velocity = parseValueWithReference(parts[2], 'f', getDefaultVelocity());
+        }
+
+        return result;
+    });
 }
 
 // 智能解析点播序列格式（支持新格式）
@@ -934,9 +955,16 @@ function parseSolfegeSequence(input) {
         } else if (item.startsWith('_')) {
             // 只有时长的空闲
             const parts = item.split('_');
+            let duration = getNoteDuration();
+
+            // 解析时长部分（支持t引用）
+            if (parts.length >= 2 && parts[1] !== '') {
+                duration = parseValueWithReference(parts[1], 't', getNoteDuration());
+            }
+
             parsedSequence.push({
                 solfege: null,
-                duration: parseFloat(parts[1]) || getNoteDuration(),
+                duration: duration,
                 velocity: getDefaultVelocity(),
                 isRest: true
             });
@@ -956,6 +984,31 @@ function parseSolfegeSequence(input) {
 
     return parsedSequence;
 }
+
+// 解析带引用的数值（支持t和f引用）
+function parseValueWithReference(valueStr, referenceType, baseValue) {
+    if (!valueStr) return baseValue;
+
+    // 如果直接是引用符号，返回基准值
+    if (valueStr === referenceType) {
+        return baseValue;
+    }
+
+    // 检查是否包含引用符号（如2t, 0.5f等）
+    if (valueStr.endsWith(referenceType)) {
+        const multiplierStr = valueStr.slice(0, -1); // 去掉结尾的t或f
+        const multiplier = parseFloat(multiplierStr);
+
+        if (!isNaN(multiplier)) {
+            return baseValue * multiplier;
+        }
+    }
+
+    // 如果是纯数字，直接解析
+    const numericValue = parseFloat(valueStr);
+    return isNaN(numericValue) ? baseValue : numericValue;
+}
+
 
 // 格式化时间为分:秒
 function formatTime(seconds) {
@@ -977,12 +1030,12 @@ function stopPlayback() {
     currentPlaybackIndex = 0;
     totalPlaybackDuration = 0;
     playbackStartTime = 0;
-    
+
     if (playbackInterval) {
         clearInterval(playbackInterval);
         playbackInterval = null;
     }
-    
+
     // 隐藏进度条
     progressContainer.classList.remove('visible');
     updateProgressBar(0, 1);
@@ -991,26 +1044,26 @@ function stopPlayback() {
 // 继续播放
 async function continuePlayback() {
     if (!isPlaying) return;
-    
+
     // 清除之前的定时器
     if (playbackInterval) {
         clearInterval(playbackInterval);
     }
-    
+
     // 设置进度更新定时器（只用于显示，无交互）
     playbackInterval = setInterval(() => {
         if (!isPlaying) return;
-        
+
         const currentTime = (Date.now() - playbackStartTime) / 1000;
         updateProgressBar(Math.min(currentTime, totalPlaybackDuration), totalPlaybackDuration);
-        
+
         // 检查是否播放完成
         if (currentTime >= totalPlaybackDuration) {
             stopPlayback();
             MessageUtils.showSuccess("唱名序列播放完成！");
         }
     }, 100);
-    
+
     // 从当前索引开始播放
     await playFromIndex(currentPlaybackIndex);
 }
@@ -1018,18 +1071,18 @@ async function continuePlayback() {
 // 从指定索引开始播放
 async function playFromIndex(startIndex) {
     if (!isPlaying) return;
-    
+
     const sequence = currentPlaybackSequence;
     const solfegeNoteMap = createSolfegeNoteMap();
     const useDefaultMap = Object.keys(solfegeNoteMap).length === 0;
     const isHideMode = document.body.classList.contains('hide-mode');
-    
+
     for (let i = startIndex; i < sequence.length; i++) {
         if (!isPlaying) break;
-        
+
         const item = sequence[i];
         currentPlaybackIndex = i;
-        
+
         if (item.isRest) {
             // 处理休止符
             await new Promise(resolve => {
@@ -1045,15 +1098,15 @@ async function playFromIndex(startIndex) {
             });
             continue;
         }
-        
+
         if (item.isChord) {
             // 处理和弦
             const chordNotes = [];
             let maxDuration = 0;
-            
+
             for (const chordItem of item.chord) {
                 if (chordItem.solfege === null) continue;
-                
+
                 const noteToPlay = findNoteForSolfege(chordItem.solfege, solfegeNoteMap, useDefaultMap);
                 if (noteToPlay) {
                     chordNotes.push({
@@ -1064,7 +1117,7 @@ async function playFromIndex(startIndex) {
                     maxDuration = Math.max(maxDuration, chordItem.duration);
                 }
             }
-            
+
             if (chordNotes.length > 0) {
                 // 播放和弦
                 if (!isHideMode) {
@@ -1073,12 +1126,12 @@ async function playFromIndex(startIndex) {
                         if (key) key.classList.add('playing');
                     });
                 }
-                
+
                 chordNotes.forEach(chordNote => {
                     const normalizedVelocity = Math.max(0, Math.min(127, chordNote.velocity)) / 127;
                     getSampler().triggerAttackRelease(chordNote.note, chordNote.duration, undefined, normalizedVelocity);
                 });
-                
+
                 await new Promise(resolve => {
                     const timeout = setTimeout(() => {
                         if (!isHideMode) {
@@ -1089,7 +1142,7 @@ async function playFromIndex(startIndex) {
                         }
                         resolve();
                     }, maxDuration * 1000);
-                    
+
                     // 检查是否被停止
                     const checkStop = setInterval(() => {
                         if (!isPlaying) {
@@ -1104,17 +1157,17 @@ async function playFromIndex(startIndex) {
             // 处理音符
             const noteToPlay = findNoteForSolfege(item.solfege, solfegeNoteMap, useDefaultMap);
             if (!noteToPlay) continue;
-            
+
             // 播放前高亮
             if (!isHideMode) {
                 const key = document.querySelector(`.key[data-note="${noteToPlay}"]`);
                 if (key) key.classList.add('playing');
             }
-            
+
             // 播放音符
             const normalizedVelocity = Math.max(0, Math.min(127, item.velocity)) / 127;
             getSampler().triggerAttackRelease(noteToPlay, item.duration, undefined, normalizedVelocity);
-            
+
             await new Promise(resolve => {
                 const timeout = setTimeout(() => {
                     if (!isHideMode) {
@@ -1123,7 +1176,7 @@ async function playFromIndex(startIndex) {
                     }
                     resolve();
                 }, item.duration * 1000);
-                
+
                 // 检查是否被停止
                 const checkStop = setInterval(() => {
                     if (!isPlaying) {
@@ -1152,7 +1205,7 @@ function createSolfegeNoteMap() {
 // 根据唱名查找音符
 function findNoteForSolfege(solfegeStr, solfegeNoteMap, useDefaultMap) {
     const { baseSolfege, octaveShift, pitchShift } = parseSolfegeWithModifiers(solfegeStr);
-    
+
     if (useDefaultMap) {
         const noteBase = solfegeToNoteMap[baseSolfege.toLowerCase()];
         if (noteBase) {
@@ -1182,7 +1235,7 @@ async function playSolfegeSequence() {
         stopPlayback();
         return;
     }
-    
+
     const sequenceInput = document.getElementById('solfegeSequence').value.trim();
     if (!sequenceInput) {
         MessageUtils.showWarning("请输入唱名序列");
@@ -1206,20 +1259,20 @@ async function playSolfegeSequence() {
     isPlaying = true;
     currentPlaybackSequence = parsedSequence;
     currentPlaybackIndex = 0;
-    
+
     // 计算总时长
     totalPlaybackDuration = parsedSequence.reduce((total, item) => {
         if (item.isRest) return total + item.duration;
         if (item.isChord) return total + Math.max(...item.chord.map(note => note.duration));
         return total + item.duration;
     }, 0);
-    
+
     playbackStartTime = Date.now();
-    
+
     // 显示进度条
     progressContainer.classList.add('visible');
     updateProgressBar(0, totalPlaybackDuration);
-    
+
     // 进度条点击事件已移除
     randomBtn.disabled = true;
     MessageUtils.showStatusMessage("正在播放唱名序列...", 0);
@@ -1230,10 +1283,10 @@ async function playSolfegeSequence() {
             await Tone.start();
             MessageUtils.showStatusMessage("音频上下文已启动，正在播放唱名序列...", 0);
         }
-        
+
         // 开始播放
         await continuePlayback();
-        
+
     } catch (error) {
         console.error("播放错误:", error);
         MessageUtils.showError("播放失败：" + error.message);
@@ -1243,45 +1296,6 @@ async function playSolfegeSequence() {
             randomBtn.disabled = false;
         }
     }
-}
-
-function setupScrollArrows() {
-    const pianoContainer = document.querySelector('.piano-container');
-    const leftArrow = document.querySelector('.left-arrow');
-    const rightArrow = document.querySelector('.right-arrow');
-
-    // 设置滚动步长（每次滚动一个八度）
-    const scrollStep = 200;
-
-    leftArrow.addEventListener('click', () => {
-        pianoContainer.scrollBy({
-            left: -scrollStep,
-            behavior: 'smooth'
-        });
-    });
-
-    rightArrow.addEventListener('click', () => {
-        pianoContainer.scrollBy({
-            left: scrollStep,
-            behavior: 'smooth'
-        });
-    });
-
-    // 在移动设备上添加触摸滑动支持
-    let startX = 0;
-    let scrollLeft = 0;
-
-    pianoContainer.addEventListener('touchstart', (e) => {
-        startX = e.touches[0].pageX;
-        scrollLeft = pianoContainer.scrollLeft;
-    });
-
-    pianoContainer.addEventListener('touchmove', (e) => {
-        e.preventDefault();
-        const x = e.touches[0].pageX;
-        const walk = (x - startX) * 2;
-        pianoContainer.scrollLeft = scrollLeft - walk;
-    });
 }
 
 // 获取完整的88键音符列表
@@ -1342,4 +1356,4 @@ if (typeof module !== 'undefined' && module.exports) {
         initAudioLoad,
         isAudioReady
     };
-}
+} 

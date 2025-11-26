@@ -1,4 +1,3 @@
- 
 // 主题切换和应用主逻辑模块
 
 // 隐藏模式状态
@@ -14,10 +13,10 @@ async function init() {
         // 首先初始化音源加载
         MessageUtils.showStatusMessage("正在初始化音源...");
         await initAudioLoad();
-        
+
         // 音源加载完成后继续其他初始化
         MessageUtils.showStatusMessage("音源加载完成，初始化界面...");
-        
+
         // 初始化主题管理器
         ThemeManager.init();
 
@@ -76,9 +75,9 @@ async function init() {
 
         // 初始验证
         checkAllValidations();
-        
+
         MessageUtils.showStatusMessage("初始化完成，可以开始使用");
-        
+
     } catch (error) {
         console.error("初始化失败:", error);
         MessageUtils.showError("初始化失败: " + error.message);
@@ -112,14 +111,53 @@ function toggleHideMode() {
     }
 }
 
+function setupScrollArrows() {
+    const pianoContainer = document.querySelector('.piano-container');
+    const leftArrow = document.querySelector('.left-arrow');
+    const rightArrow = document.querySelector('.right-arrow');
+
+    // 设置滚动步长（每次滚动一个八度）
+    const scrollStep = 200;
+
+    leftArrow.addEventListener('click', () => {
+        pianoContainer.scrollBy({
+            left: -scrollStep,
+            behavior: 'smooth'
+        });
+    });
+
+    rightArrow.addEventListener('click', () => {
+        pianoContainer.scrollBy({
+            left: scrollStep,
+            behavior: 'smooth'
+        });
+    });
+
+    // 在移动设备上添加触摸滑动支持
+    let startX = 0;
+    let scrollLeft = 0;
+
+    pianoContainer.addEventListener('touchstart', (e) => {
+        startX = e.touches[0].pageX;
+        scrollLeft = pianoContainer.scrollLeft;
+    });
+
+    pianoContainer.addEventListener('touchmove', (e) => {
+        e.preventDefault();
+        const x = e.touches[0].pageX;
+        const walk = (x - startX) * 2;
+        pianoContainer.scrollLeft = scrollLeft - walk;
+    });
+}
+
 // 格式化时值显示，尽量使用整数
 function formatDurationDisplay(duration) {
     // 先四舍五入到最多三位小数
     const rounded = Math.round(duration * 1000) / 1000;
-    
+
     // 转换为字符串并去掉多余的0
     let result = rounded.toString();
-    
+
     // 如果包含小数点，去掉末尾的0
     if (result.includes('.')) {
         result = result.replace(/0+$/, ''); // 去掉末尾的0
@@ -127,42 +165,10 @@ function formatDurationDisplay(duration) {
             result = result.slice(0, -1); // 如果以小数点结尾，去掉小数点
         }
     }
-    
-    return result;
-}
-
-// 解析单个音项（支持最小代价显示格式）
-function parseSingleNote(item) {
-    const parts = item.split('_');
-    const result = {
-        solfege: parts[0] || '',
-        duration: getNoteDuration(), // 默认使用固定时长
-        velocity: getDefaultVelocity() // 默认使用固定力度
-    };
-
-    // 根据下划线数量判断参数显示情况
-    if (parts.length === 1) {
-        // 只有唱名：使用固定时长和固定力度
-        result.duration = getNoteDuration();
-        result.velocity = getDefaultVelocity();
-    } else if (parts.length === 2) {
-        // 唱名_时长：时长随机+力度固定模式
-        result.duration = parseFloat(parts[1]) || getNoteDuration();
-        result.velocity = getDefaultVelocity();
-    } else if (parts.length === 3) {
-        if (parts[1] === '') {
-            // 唱名__力度：时长固定+力度随机模式（跳过时长）
-            result.duration = getNoteDuration();
-            result.velocity = parseInt(parts[2]) || getDefaultVelocity();
-        } else {
-            // 唱名_时长_力度：时长随机+力度随机模式
-            result.duration = parseFloat(parts[1]) || getNoteDuration();
-            result.velocity = parseInt(parts[2]) || getDefaultVelocity();
-        }
-    }
 
     return result;
 }
+
 
 // 在setupEventListeners函数中添加按钮点击事件设置
 function setupEventListeners() {
@@ -217,16 +223,16 @@ function setupEventListeners() {
     randomModeSelect.addEventListener('change', () => {
         const value = randomSolfegeCountInput.value === '' ? NaN : parseInt(randomSolfegeCountInput.value);
         const noteCountValue = noteCountInput.value === '' ? NaN : parseInt(noteCountInput.value);
-        
+
         ValidationUtils.validateRandomSolfegeCount(value, randomModeSelect.value, noteCountValue, randomSolfegeCountError);
-        
+
         // 当切换到"不允许重复音"模式时，自动同步随机唱名数量
         if (randomModeSelect.value === 'nonRepeat' && !isNaN(noteCountValue)) {
             randomSolfegeCountInput.value = noteCountValue;
             // 重新验证
             ValidationUtils.validateRandomSolfegeCount(noteCountValue, randomModeSelect.value, noteCountValue, randomSolfegeCountError);
         }
-        
+
         checkAllValidations();
     });
 
@@ -273,18 +279,18 @@ function setupEventListeners() {
     });
 
     // 新增力度验证
-noteVelocityInput.addEventListener('input', () => {
-    const value = noteVelocityInput.value === '' ? NaN : parseInt(noteVelocityInput.value);
-    // 移除第三个参数true，因为validateNoteVelocity函数已经修改为总是显示错误
-    ValidationUtils.validateNoteVelocity(value, noteVelocityError);
-    checkAllValidations();
-});
+    noteVelocityInput.addEventListener('input', () => {
+        const value = noteVelocityInput.value === '' ? NaN : parseInt(noteVelocityInput.value);
+        // 移除第三个参数true，因为validateNoteVelocity函数已经修改为总是显示错误
+        ValidationUtils.validateNoteVelocity(value, noteVelocityError);
+        checkAllValidations();
+    });
 
-noteVelocityInput.addEventListener('change', () => {
-    const value = noteVelocityInput.value === '' ? NaN : parseInt(noteVelocityInput.value);
-    ValidationUtils.validateNoteVelocity(value, noteVelocityError);
-    checkAllValidations();
-});
+    noteVelocityInput.addEventListener('change', () => {
+        const value = noteVelocityInput.value === '' ? NaN : parseInt(noteVelocityInput.value);
+        ValidationUtils.validateNoteVelocity(value, noteVelocityError);
+        checkAllValidations();
+    });
 
     // 初始格式化显示
     formatNoteDurationDisplay();
@@ -382,7 +388,7 @@ function setupButtonClickHandlers() {
         button.parentNode.replaceChild(newButton, button);
 
         // 为新按钮添加事件监听器
-        document.getElementById(buttonInfo.id).addEventListener('click', function(e) {
+        document.getElementById(buttonInfo.id).addEventListener('click', function (e) {
             if (this.disabled) {
                 e.preventDefault();
                 e.stopPropagation();
@@ -410,7 +416,7 @@ function setupButtonClickHandlers() {
 
                     if (isNaN(noteDurationValue) || noteDurationValue < 0 || noteDurationValue > 4) {
                         reason = "请先输入有效的音符时长（0-4秒）";
-                    } 
+                    }
 
                     if (isNaN(noteVelocityValue) || noteVelocityValue < 0 || noteVelocityValue > 127) {
                         reason = "请先输入有效的音符力度（0-127）";
