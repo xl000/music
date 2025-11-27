@@ -175,6 +175,12 @@ function setupEventListeners() {
     // 先设置按钮的禁用状态点击提示
     setupButtonClickHandlers();
 
+    // 添加特效点播按钮事件监听
+    const effectBtn = document.getElementById('effectBtn');
+    if (effectBtn) {
+        effectBtn.addEventListener('click', playEffectSequence);
+    }
+
     // 音符数量变化监听
     noteCountInput.addEventListener('change', () => {
         const value = noteCountInput.value === '' ? NaN : parseInt(noteCountInput.value);
