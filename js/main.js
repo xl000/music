@@ -176,10 +176,10 @@ function setupEventListeners() {
     setupButtonClickHandlers();
 
     // 添加特效点播按钮事件监听
-    const effectBtn = document.getElementById('effectBtn');
-    if (effectBtn) {
-        effectBtn.addEventListener('click', playEffectSequence);
-    }
+    // const effectBtn = document.getElementById('effectBtn');
+    // if (effectBtn) {
+    //     effectBtn.addEventListener('click', playEffectSequence);
+    // }
 
     // 音符数量变化监听
     noteCountInput.addEventListener('change', () => {

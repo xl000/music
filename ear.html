@@ -156,11 +156,13 @@
             </div>
 
             <div class="button-group">
-                <button id="effectBtn" class="effect-btn">特效点播</button>
+                <!-- <button id="effectBtn" class="effect-btn">特效点播</button> -->
                 <button id="randomBtn" class="random-btn" disabled>随机点播</button>
                 <button id="resetBtn">重置选择</button>
                 <!-- 新增隐藏模式按钮 -->
                 <button id="hideModeToggle" class="hide-mode-btn">开启隐藏</button>
+                <!-- 新增音阶训练按钮 -->
+                <button id="scaleTrainingBtn" class="scale-training-btn">音阶训练</button>
             </div>
 
         </div>
@@ -173,6 +175,30 @@
     <script src="js/utils.js"></script>
     <script src="js/piano.js"></script>
     <script src="js/main.js"></script>
+
+    <script>
+        // 添加音阶训练按钮的点击事件处理
+        document.addEventListener('DOMContentLoaded', function() {
+            const scaleTrainingBtn = document.getElementById('scaleTrainingBtn');
+            
+            if (scaleTrainingBtn) {
+                scaleTrainingBtn.addEventListener('click', function() {
+                    // 获取当前主题名称
+                    const body = document.body;
+                    let themeName = '粉色主题'; // 默认主题
+                    
+                    if (body.classList.contains('default-theme')) {
+                        themeName = '粉色主题';
+                    } else if (body.classList.contains('dark-theme')) {
+                        themeName = '蓝色主题';
+                    }
+                    
+                    // 跳转到simple_ear.html并传递主题参数
+                    window.location.href = `simple_ear.html?theme=${encodeURIComponent(themeName)}`;
+                });
+            }
+        });
+    </script>
 
 </body>
 
