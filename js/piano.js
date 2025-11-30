@@ -51,6 +51,10 @@ function initAudioLoad() {
                 loadedFiles = totalFiles;
                 updateLoadProgress(100, "音源加载完成！");
                 isAudioLoaded = true;
+
+                // 将sampler暴露给全局，供其他模块使用
+                window.sampler = sampler;
+                
                 setTimeout(() => {
                     // 切换到主界面
                     switchToMainInterface();
@@ -1388,84 +1392,6 @@ function convertSolfegeToAbsolutePitch(inputText) {
     console.log("转换结果:", result);
     return result;
 }
-
-// 转换单个音符为绝对音高
-// function convertSingleNoteToAbsolute(item, solfegeNoteMap, useDefaultMap) {
-//     const parts = item.split('_');
-//     const solfegePart = parts[0] || '';
-    
-//     // 检查是否为空闲时间（没有唱名部分，但有时长参数）
-//     if (!solfegePart) {
-//         // 如果第一个部分是空的，说明是空闲时间，保持原样
-//         return item;
-//     }
-    
-//     // 查找对应的绝对音高
-//     const absoluteNote = findNoteForSolfege(solfegePart, solfegeNoteMap, useDefaultMap);
-    
-//     if (absoluteNote) {
-//         // 替换唱名部分为绝对音高，保留其他部分
-//         return absoluteNote + (parts.length > 1 ? '_' + parts.slice(1).join('_') : '');
-//     } else {
-//         // 如果找不到对应的音高，检查是否是有效的唱名
-//         const baseSolfege = solfegePart.replace(/[<>#*]/g, '');
-//         if (solfegeToNoteMap[baseSolfege.toLowerCase()] || useDefaultMap) {
-//             // 如果是标准唱名但当前没有映射，保持原样并给出警告
-//             console.warn(`唱名 "${solfegePart}" 在当前选择的音符中没有对应关系，保持原样`);
-//             return item;
-//         } else {
-//             // 如果不是标准唱名，可能是其他标识符，保持原样
-//             return item;
-//         }
-//     }
-// }
-
-// 转换和弦为绝对音高
-// function convertChordToAbsolute(chordStr, solfegeNoteMap, useDefaultMap) {
-//     // 提取和弦内部内容
-//     const inner = chordStr.replace(/[()（）]/g, '');
-//     const chordNotes = inner.split(/[,，]/).map(note => note.trim()).filter(note => note !== '');
-    
-//     const convertedChordNotes = chordNotes.map(note => {
-//         // 处理和弦中的空闲时间
-//         if (note.startsWith('_')) {
-//             return note;
-//         }
-//         return convertSingleNoteToAbsolute(note, solfegeNoteMap, useDefaultMap);
-//     });
-    
-//     return '(' + convertedChordNotes.join(',') + ')';
-// }
-
-// 特效点播功能
-// async function playEffectSequence() {
-//     if (!isAudioReady()) {
-//         MessageUtils.showWarning("音源尚未加载完成，请稍候");
-//         return;
-//     }
-    
-//     const sequenceInput = document.getElementById('solfegeSequence');
-//     const inputText = sequenceInput.value.trim();
-    
-//     if (!inputText) {
-//         MessageUtils.showWarning("请输入唱名序列");
-//         return;
-//     }
-    
-//     // 转换为绝对音高模式
-//     const absoluteSequence = convertSolfegeToAbsolutePitch(inputText);
-    
-//     // 将转换后的内容显示在控制台
-//     console.log("=== 唱名模式转绝对音高模式 ===");
-//     console.log("原始输入:", inputText);
-//     console.log("转换结果:", absoluteSequence);
-    
-//     MessageUtils.showSuccess("已转换为绝对音高模式，请在控制台查看结果");
-// }
-
-// 将函数暴露给全局作用域
-// window.convertSolfegeToAbsolutePitch = convertSolfegeToAbsolutePitch;
-// window.playEffectSequence = playEffectSequence;
 
 // 导出函数供其他模块使用
 if (typeof module !== 'undefined' && module.exports) {
