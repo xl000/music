@@ -1559,6 +1559,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const isClickInsideModal = resultModal.contains(event.target);
 
+        // 如果点击的是切换按钮本身，不执行收起逻辑（由专门的按钮点击事件处理）
+        if (toggleBtn === event.target || toggleBtn.contains(event.target)) {
+            return;
+        }
+
         // 如果点击发生在外部且面板是展开的，并且点击的不是模态框内容，则尝试收起面板
         if (!isClickInsideSettings && !isClickInsideModal && settingsPanel.classList.contains('expanded')) {
             // 首先验证音程设置
@@ -1572,7 +1577,7 @@ document.addEventListener('DOMContentLoaded', function () {
             settingsPanel.classList.remove('expanded');
             toggleBtn.textContent = '设置面板';
 
-            // 新增代码：在面板收起后立即刷新页面并更新设置
+            // 在面板收起后立即刷新页面并更新设置
             setTimeout(() => {
                 // 重置训练状态
                 resetTrainingState();
