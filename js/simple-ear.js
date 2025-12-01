@@ -576,6 +576,15 @@ function showModal(title, message) {
 function setupSettingsPanel() {
     toggleSettingsBtn.addEventListener('click', function (e) {
         e.stopPropagation(); // 阻止事件冒泡
+        
+        // 验证设置（仅在展开时验证）
+        if (!settingsPanel.classList.contains('expanded')) {
+            if (!validateIntervalSettings()) {
+                showModal("设置错误", "请检查音程范围设置");
+                return; // 阻止展开面板
+            }
+        }
+        
         const isExpanded = settingsPanel.classList.toggle('expanded');
         toggleSettingsBtn.textContent = isExpanded ? '收起设置' : '设置面板';
 
