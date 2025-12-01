@@ -1,3 +1,6 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -185,12 +188,12 @@
                 scaleTrainingBtn.addEventListener('click', function() {
                     // 获取当前主题名称
                     const body = document.body;
-                    let themeName = '粉色主题'; // 默认主题
+                    let themeName = ''; // 默认主题
                     
                     if (body.classList.contains('default-theme')) {
-                        themeName = '粉色主题';
-                    } else if (body.classList.contains('dark-theme')) {
                         themeName = '蓝色主题';
+                    } else if (body.classList.contains('pink-theme')) {
+                        themeName = '粉色主题';
                     }
                     
                     // 跳转到simple_ear.html并传递主题参数
