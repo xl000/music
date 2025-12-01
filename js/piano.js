@@ -40,7 +40,40 @@ let loadedFiles = 0;
 // 初始化音源加载
 function initAudioLoad() {
     return new Promise((resolve, reject) => {
-        // 更新加载状态
+        // 先检查sessionStorage中是否有缓存的音源数据
+        const cachedAudioData = sessionStorage.getItem('pianoAudioData');
+        const cachedLoadTime = sessionStorage.getItem('pianoAudioLoadTime');
+        
+        // 如果缓存存在且是最近加载的（比如1小时内），直接使用缓存
+        if (cachedAudioData && cachedLoadTime && (Date.now() - parseInt(cachedLoadTime)) < 3600000) {
+            try {
+                console.log("从sessionStorage加载缓存的音源数据");
+                updateLoadProgress(100, "从缓存加载音源完成！");
+                isAudioLoaded = true;
+                
+                // 创建采样器使用缓存状态
+                sampler = new Tone.Sampler({
+                    urls: soundFiles,
+                    baseUrl: "./sounds/",
+                    onload: () => {
+                        // 将sampler暴露给全局，供其他模块使用
+                        window.sampler = sampler;
+                        
+                        setTimeout(() => {
+                            switchToMainInterface();
+                            resolve(sampler);
+                        }, 100);
+                    }
+                }).toDestination();
+                
+                return;
+            } catch (error) {
+                console.error("缓存加载失败，重新加载音源:", error);
+                // 如果缓存加载失败，继续正常加载流程
+            }
+        }
+        
+        // 正常加载音源
         updateLoadProgress(0, "开始加载音源...");
 
         // 创建采样器 - 只使用本地音源
@@ -51,6 +84,20 @@ function initAudioLoad() {
                 loadedFiles = totalFiles;
                 updateLoadProgress(100, "音源加载完成！");
                 isAudioLoaded = true;
+
+                // 将音源数据存储到sessionStorage
+                try {
+                    const audioData = {
+                        soundFiles: soundFiles,
+                        baseUrl: "./sounds/",
+                        loadTime: Date.now()
+                    };
+                    sessionStorage.setItem('pianoAudioData', JSON.stringify(audioData));
+                    sessionStorage.setItem('pianoAudioLoadTime', Date.now().toString());
+                    console.log("音源数据已存储到sessionStorage");
+                } catch (error) {
+                    console.warn("sessionStorage存储失败:", error);
+                }
 
                 // 将sampler暴露给全局，供其他模块使用
                 window.sampler = sampler;
