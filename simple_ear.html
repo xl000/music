@@ -7,6 +7,29 @@
     <title>钢琴音阶训练器</title>
     <script src="js/Tone.js"></script>
     <link rel="stylesheet" href="css/simple-ear.css">
+    <!-- 新增：主题检测脚本 -->
+    <script>
+        // 获取URL参数中的主题设置
+        function getUrlParams() {
+            const params = new URLSearchParams(window.location.search);
+            return {
+                theme: params.get('theme') || '默认主题'
+            };
+        }
+        
+        // 应用主题
+        function applyTheme(theme) {
+            if (theme === '粉色主题') {
+                document.body.classList.add('theme-pink');
+            }
+        }
+        
+        // 页面加载时应用主题
+        document.addEventListener('DOMContentLoaded', function() {
+            const params = getUrlParams();
+            applyTheme(params.theme);
+        });
+    </script>
 </head>
 
 <body>
