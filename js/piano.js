@@ -1085,6 +1085,48 @@ function parseSolfegeSequence(input) {
     return parsedSequence;
 }
 
+// 计算播放序列的总时长（考虑延音重叠）
+function calculateTotalDuration(sequence) {
+    let totalDuration = 0;
+    let maxSustainEndTime = 0;
+    let currentTime = 0;
+
+    sequence.forEach((item, index) => {
+        if (item.isRest) {
+            // 休止符：只增加当前时间
+            currentTime += item.duration;
+            maxSustainEndTime = Math.max(maxSustainEndTime, currentTime);
+        } else if (item.isChord) {
+            // 和弦：计算每个音符的结束时间
+            const chordStartTime = currentTime;
+            let chordMaxDuration = 0;
+            let chordMaxSustainEnd = chordStartTime;
+
+            item.chord.forEach(note => {
+                const noteDuration = note.duration || getNoteDuration();
+                const sustainDuration = note.sustainDuration || 0;
+                const noteEndTime = chordStartTime + Math.max(noteDuration, sustainDuration);
+                chordMaxSustainEnd = Math.max(chordMaxSustainEnd, noteEndTime);
+                chordMaxDuration = Math.max(chordMaxDuration, noteDuration);
+            });
+
+            maxSustainEndTime = Math.max(maxSustainEndTime, chordMaxSustainEnd);
+            currentTime += chordMaxDuration;
+        } else {
+            // 单个音符
+            const noteDuration = item.duration || getNoteDuration();
+            const sustainDuration = item.sustainDuration || 0;
+            const noteEndTime = currentTime + Math.max(noteDuration, sustainDuration);
+
+            maxSustainEndTime = Math.max(maxSustainEndTime, noteEndTime);
+            currentTime += noteDuration;
+        }
+    });
+
+    // 总时长是基本时长和所有延音结束时间的最大值
+    return Math.max(currentTime, maxSustainEndTime);
+}
+
 // 解析带引用的数值（支持t和f引用）
 function parseValueWithReference(valueStr, referenceType, baseValue) {
     if (!valueStr) return parseFloat(baseValue.toFixed(3));
@@ -1147,6 +1189,18 @@ function stopPlayback() {
         playbackInterval = null;
     }
 
+    // 停止所有音符（包括延音）
+    try {
+        getSampler().releaseAll();
+    } catch (error) {
+        console.warn("停止音符时出错:", error);
+    }
+
+    // 移除所有高亮
+    document.querySelectorAll('.key.playing').forEach(key => {
+        key.classList.remove('playing');
+    });
+
     // 隐藏进度条
     progressContainer.classList.remove('visible');
     updateProgressBar(0, 1);
@@ -1179,7 +1233,7 @@ async function continuePlayback() {
     await playFromIndex(currentPlaybackIndex);
 }
 
-// 从指定索引开始播放
+// 从指定索引开始播放（支持延音重叠）
 async function playFromIndex(startIndex) {
     if (!isPlaying) return;
 
@@ -1188,6 +1242,10 @@ async function playFromIndex(startIndex) {
     const useDefaultMap = Object.keys(solfegeNoteMap).length === 0;
     const isHideMode = document.body.classList.contains('hide-mode');
 
+    // 存储所有活跃的延音音符及其释放时间
+    const activeSustains = new Map();
+    let currentTime = 0;
+
     for (let i = startIndex; i < sequence.length; i++) {
         if (!isPlaying) break;
 
@@ -1195,9 +1253,12 @@ async function playFromIndex(startIndex) {
         currentPlaybackIndex = i;
 
         if (item.isRest) {
-            // 处理休止符
+            // 处理休止符 - 只等待基本时长
+            const restDuration = item.duration * 1000;
+            currentTime += item.duration;
+
             await new Promise(resolve => {
-                const timeout = setTimeout(resolve, item.duration * 1000);
+                const timeout = setTimeout(resolve, restDuration);
                 const checkStop = setInterval(() => {
                     if (!isPlaying) {
                         clearTimeout(timeout);
@@ -1212,25 +1273,28 @@ async function playFromIndex(startIndex) {
         if (item.isChord) {
             // 处理和弦
             const chordNotes = [];
-            let maxDuration = 0;
+            let maxNoteDuration = 0;
 
             for (const chordItem of item.chord) {
                 if (chordItem.solfege === null) continue;
 
                 const noteToPlay = findNoteForSolfege(chordItem.solfege, solfegeNoteMap, useDefaultMap);
                 if (noteToPlay) {
+                    const noteDuration = chordItem.duration || getNoteDuration();
+                    const sustainDuration = chordItem.sustainDuration || 0;
+
                     chordNotes.push({
                         note: noteToPlay,
-                        duration: chordItem.duration,
-                        velocity: chordItem.velocity,
-                        sustainDuration: chordItem.sustainDuration || 0
+                        duration: noteDuration,
+                        velocity: chordItem.velocity || getDefaultVelocity(),
+                        sustainDuration: sustainDuration
                     });
-                    maxDuration = Math.max(maxDuration, chordItem.duration);
+                    maxNoteDuration = Math.max(maxNoteDuration, noteDuration);
                 }
             }
 
             if (chordNotes.length > 0) {
-                // 播放和弦
+                // 播放和弦前高亮
                 if (!isHideMode) {
                     chordNotes.forEach(chordNote => {
                         const key = document.querySelector(`.key[data-note="${chordNote.note}"]`);
@@ -1238,26 +1302,25 @@ async function playFromIndex(startIndex) {
                     });
                 }
 
-                // 播放和弦音符
+                // 播放和弦音符（支持延音）
                 chordNotes.forEach(chordNote => {
                     const normalizedVelocity = Math.max(0, Math.min(127, chordNote.velocity)) / 127;
+                    const sustainDuration = chordNote.sustainDuration || 0;
 
-                    if (chordNote.sustainDuration > 0) {
-                        // 有延音的和弦音符
+                    if (sustainDuration > 0) {
+                        // 有延音：触发攻击，记录释放时间
                         getSampler().triggerAttack(chordNote.note, undefined, normalizedVelocity);
-                        setTimeout(() => {
-                            getSampler().triggerRelease(chordNote.note);
-                        }, chordNote.sustainDuration * 1000);
+                        const releaseTime = Date.now() + sustainDuration * 1000;
+                        activeSustains.set(chordNote.note, releaseTime);
                     } else {
-                        // 无延音的正常播放
+                        // 无延音：正常播放
                         getSampler().triggerAttackRelease(chordNote.note, chordNote.duration, undefined, normalizedVelocity);
                     }
                 });
 
-                // 等待最长的音符播放完成
-                const maxSustainDuration = Math.max(...chordNotes.map(n => n.sustainDuration));
-                const waitTime = Math.max(maxDuration, maxSustainDuration) * 1000;
+                currentTime += maxNoteDuration;
 
+                // 只等待和弦的基本时长，不等待延音
                 await new Promise(resolve => {
                     const timeout = setTimeout(() => {
                         if (!isHideMode) {
@@ -1267,7 +1330,7 @@ async function playFromIndex(startIndex) {
                             });
                         }
                         resolve();
-                    }, waitTime);
+                    }, maxNoteDuration * 1000);
 
                     const checkStop = setInterval(() => {
                         if (!isPlaying) {
@@ -1283,30 +1346,32 @@ async function playFromIndex(startIndex) {
             const noteToPlay = findNoteForSolfege(item.solfege, solfegeNoteMap, useDefaultMap);
             if (!noteToPlay) continue;
 
+            const noteDuration = item.duration || getNoteDuration();
+            const sustainDuration = item.sustainDuration || 0;
+            const velocity = item.velocity || getDefaultVelocity();
+
             // 播放前高亮
             if (!isHideMode) {
                 const key = document.querySelector(`.key[data-note="${noteToPlay}"]`);
                 if (key) key.classList.add('playing');
             }
 
-            // 播放音符
-            const normalizedVelocity = Math.max(0, Math.min(127, item.velocity)) / 127;
-            const sustainDuration = item.sustainDuration || 0;
+            // 播放音符（支持延音）
+            const normalizedVelocity = Math.max(0, Math.min(127, velocity)) / 127;
 
             if (sustainDuration > 0) {
-                // 有延音的音符
+                // 有延音：触发攻击，记录释放时间
                 getSampler().triggerAttack(noteToPlay, undefined, normalizedVelocity);
-                setTimeout(() => {
-                    getSampler().triggerRelease(noteToPlay);
-                }, sustainDuration * 1000);
+                const releaseTime = Date.now() + sustainDuration * 1000;
+                activeSustains.set(noteToPlay, releaseTime);
             } else {
-                // 无延音的正常播放
-                getSampler().triggerAttackRelease(noteToPlay, item.duration, undefined, normalizedVelocity);
+                // 无延音：正常播放
+                getSampler().triggerAttackRelease(noteToPlay, noteDuration, undefined, normalizedVelocity);
             }
 
-            // 等待时间取音符时长和延音时长的较大值
-            const waitTime = Math.max(item.duration, sustainDuration) * 1000;
+            currentTime += noteDuration;
 
+            // 只等待音符的基本时长，不等待延音
             await new Promise(resolve => {
                 const timeout = setTimeout(() => {
                     if (!isHideMode) {
@@ -1314,7 +1379,7 @@ async function playFromIndex(startIndex) {
                         if (key) key.classList.remove('playing');
                     }
                     resolve();
-                }, waitTime);
+                }, noteDuration * 1000);
 
                 const checkStop = setInterval(() => {
                     if (!isPlaying) {
@@ -1325,6 +1390,48 @@ async function playFromIndex(startIndex) {
                 }, 100);
             });
         }
+    }
+
+    // 播放完所有音符后，等待所有延音结束
+    if (isPlaying && activeSustains.size > 0) {
+        const now = Date.now();
+        const releaseTimes = Array.from(activeSustains.values());
+        const maxReleaseTime = Math.max(...releaseTimes);
+        const remainingTime = Math.max(0, maxReleaseTime - now);
+
+        if (remainingTime > 0) {
+            await new Promise(resolve => {
+                const timeout = setTimeout(() => {
+                    // 释放所有延音音符
+                    activeSustains.forEach((releaseTime, note) => {
+                        if (Date.now() >= releaseTime) {
+                            getSampler().triggerRelease(note);
+                            activeSustains.delete(note);
+                        }
+                    });
+                    resolve();
+                }, remainingTime);
+
+                const checkStop = setInterval(() => {
+                    if (!isPlaying) {
+                        clearTimeout(timeout);
+                        clearInterval(checkStop);
+                        // 停止时立即释放所有音符
+                        activeSustains.forEach((releaseTime, note) => {
+                            getSampler().triggerRelease(note);
+                        });
+                        activeSustains.clear();
+                        resolve();
+                    }
+                }, 100);
+            });
+        }
+
+        // 最终释放所有剩余的音符
+        activeSustains.forEach((releaseTime, note) => {
+            getSampler().triggerRelease(note);
+        });
+        activeSustains.clear();
     }
 }
 
@@ -1362,7 +1469,7 @@ function findNoteForSolfege(solfegeStr, solfegeNoteMap, useDefaultMap) {
     return null;
 }
 
-// 播放唱名序列（支持进度条显示，无跳转功能）
+// 播放唱名序列（支持延音重叠）
 async function playSolfegeSequence() {
     if (!isAudioReady()) {
         MessageUtils.showWarning("音源尚未加载完成，请稍候");
@@ -1398,30 +1505,14 @@ async function playSolfegeSequence() {
     currentPlaybackSequence = parsedSequence;
     currentPlaybackIndex = 0;
 
-    // 计算总时长（包含延音时长）
-    totalPlaybackDuration = parseFloat(parsedSequence.reduce((total, item) => {
-        if (item.isRest) {
-            return total + item.duration;
-        } else if (item.isChord) {
-            // 对于和弦，取所有音符的最大时长（包括延音）
-            const maxNoteDuration = Math.max(...item.chord.map(note => note.duration));
-            const maxSustainDuration = Math.max(0, ...item.chord.map(note => note.sustainDuration || 0));
-            return total + Math.max(maxNoteDuration, maxSustainDuration);
-        } else {
-            // 对于单个音符，取音符时长和延音时长的较大值
-            const noteDuration = item.duration;
-            const sustainDuration = item.sustainDuration || 0;
-            return total + Math.max(noteDuration, sustainDuration);
-        }
-    }, 0).toFixed(3)); // 保留3位小数
-
+    // 使用新的总时长计算函数 - 替换原来的计算逻辑
+    totalPlaybackDuration = calculateTotalDuration(parsedSequence);
     playbackStartTime = Date.now();
 
     // 显示进度条
     progressContainer.classList.add('visible');
     updateProgressBar(0, totalPlaybackDuration);
 
-    // 进度条点击事件已移除
     randomBtn.disabled = true;
     MessageUtils.showStatusMessage("正在播放唱名序列...", 0);
 
