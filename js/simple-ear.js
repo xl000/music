@@ -203,7 +203,8 @@ document.addEventListener('DOMContentLoaded', function() {
         sampler = loadedSampler;
         window.sampler = sampler; // 暴露到全局
         
-        // 初始化应用
+        // 初始化应用 - 确保只执行一次
+        console.log("音源加载完成，开始初始化应用");
         init();
     }).catch((error) => {
         console.error("音源加载失败:", error);
@@ -211,6 +212,8 @@ document.addEventListener('DOMContentLoaded', function() {
         hideLoadingPage();
         document.querySelector('.container').style.display = 'block';
         document.querySelector('footer').style.display = 'block';
+        
+        console.log("音源加载失败，使用降级方案初始化");
         init();
         
         // 显示错误提示
@@ -334,6 +337,8 @@ let selectedIntervals = new Set(intervalOptions.map(opt => opt.id));
 
 // 初始化函数
 function init() {
+    console.log("初始化函数开始执行");
+    
     createPiano();
     setupScrollArrows();
     createScaleDisplay();
@@ -344,6 +349,12 @@ function init() {
     createIntervalOptions(); // 创建音程范围选项
     validateIntervalSettings(); // 初始验证
     setupIntervalButtons(); // 设置音程范围按钮
+    
+    console.log("初始化函数执行完成");
+    
+    // 调试：检查按钮事件绑定
+    console.log("设置面板按钮:", toggleSettingsBtn);
+    console.log("播放按钮:", playScaleBtn);
 }
 
 // 创建音程范围选项
@@ -574,37 +585,47 @@ function showModal(title, message) {
 
 // 设置设置面板
 function setupSettingsPanel() {
-    toggleSettingsBtn.addEventListener('click', function (e) {
-        e.stopPropagation(); // 阻止事件冒泡
-        
-        // 验证设置（仅在展开时验证）
-        if (!settingsPanel.classList.contains('expanded')) {
-            if (!validateIntervalSettings()) {
-                showModal("设置错误", "请检查音程范围设置");
-                return; // 阻止展开面板
-            }
-        }
-        
-        const isExpanded = settingsPanel.classList.toggle('expanded');
-        toggleSettingsBtn.textContent = isExpanded ? '收起设置' : '设置面板';
+    // 先移除可能存在的旧事件监听器
+    toggleSettingsBtn.removeEventListener('click', handleSettingsToggle);
+    
+    // 添加新的事件监听器
+    toggleSettingsBtn.addEventListener('click', handleSettingsToggle);
+}
 
-        // 根据面板状态启用/禁用按钮
-        playScaleBtn.disabled = isExpanded;
-        randomTrainingBtn.disabled = isExpanded;
-        replayTestNoteBtn.disabled = isExpanded;
-
-        // 当面板收起时刷新页面并更新设置
-        if (!isExpanded) {
-            setTimeout(() => {
-                // 重置训练状态
-                resetTrainingState();
-                // 重新生成音阶显示
-                createScaleDisplay();
-                // 滚动到当前基准音位置
-                scrollToNote(baseNote);
-            }, 0);
+// 单独提取设置面板切换处理函数
+function handleSettingsToggle(e) {
+    e.preventDefault();
+    e.stopPropagation(); // 阻止事件冒泡
+    
+    console.log("设置面板按钮被点击"); // 调试信息
+    
+    // 验证设置（仅在展开时验证）
+    if (!settingsPanel.classList.contains('expanded')) {
+        if (!validateIntervalSettings()) {
+            showModal("设置错误", "请检查音程范围设置");
+            return; // 阻止展开面板
         }
-    });
+    }
+    
+    const isExpanded = settingsPanel.classList.toggle('expanded');
+    toggleSettingsBtn.textContent = isExpanded ? '收起设置' : '设置面板';
+
+    // 根据面板状态启用/禁用按钮
+    playScaleBtn.disabled = isExpanded;
+    randomTrainingBtn.disabled = isExpanded;
+    replayTestNoteBtn.disabled = isExpanded;
+
+    // 当面板收起时刷新页面并更新设置
+    if (!isExpanded) {
+        setTimeout(() => {
+            // 重置训练状态
+            resetTrainingState();
+            // 重新生成音阶显示
+            createScaleDisplay();
+            // 滚动到当前基准音位置
+            scrollToNote(baseNote);
+        }, 0);
+    }
 }
 
 // 设置BPM控制
@@ -1548,9 +1569,6 @@ scaleDisplay.addEventListener('click', function (e) {
         handleUserAnswer(clickedNote);
     }
 });
-
-// 初始化应用
-init();
 
 // 修改全局点击事件监听器
 document.addEventListener('DOMContentLoaded', function () {
