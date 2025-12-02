@@ -1085,46 +1085,52 @@ function parseSolfegeSequence(input) {
     return parsedSequence;
 }
 
-// 计算播放序列的总时长（考虑延音重叠）
+// 修正的总时长计算函数（延音时长作为延长值）
 function calculateTotalDuration(sequence) {
-    let totalDuration = 0;
-    let maxSustainEndTime = 0;
-    let currentTime = 0;
-
+    if (!sequence || sequence.length === 0) return 0;
+    
+    let totalBasicDuration = 0; // 所有音符的基本时长总和
+    let maxEndTime = 0;         // 最晚的音符结束时间
+    
     sequence.forEach((item, index) => {
         if (item.isRest) {
-            // 休止符：只增加当前时间
-            currentTime += item.duration;
-            maxSustainEndTime = Math.max(maxSustainEndTime, currentTime);
+            // 休止符：只增加基本时长
+            totalBasicDuration += item.duration;
+            maxEndTime = totalBasicDuration;
         } else if (item.isChord) {
-            // 和弦：计算每个音符的结束时间
-            const chordStartTime = currentTime;
-            let chordMaxDuration = 0;
-            let chordMaxSustainEnd = chordStartTime;
-
+            // 和弦：计算和弦中所有音符
+            const chordStartTime = totalBasicDuration;
+            let maxChordDuration = 0;
+            let maxChordEndTime = chordStartTime;
+            
             item.chord.forEach(note => {
                 const noteDuration = note.duration || getNoteDuration();
                 const sustainDuration = note.sustainDuration || 0;
-                const noteEndTime = chordStartTime + Math.max(noteDuration, sustainDuration);
-                chordMaxSustainEnd = Math.max(chordMaxSustainEnd, noteEndTime);
-                chordMaxDuration = Math.max(chordMaxDuration, noteDuration);
+                
+                // 和弦音符的结束时间 = 开始时间 + 基本时长 + 延音时长
+                const noteEndTime = chordStartTime + noteDuration + sustainDuration;
+                maxChordEndTime = Math.max(maxChordEndTime, noteEndTime);
+                maxChordDuration = Math.max(maxChordDuration, noteDuration);
             });
-
-            maxSustainEndTime = Math.max(maxSustainEndTime, chordMaxSustainEnd);
-            currentTime += chordMaxDuration;
+            
+            maxEndTime = Math.max(maxEndTime, maxChordEndTime);
+            totalBasicDuration += maxChordDuration;
         } else {
             // 单个音符
             const noteDuration = item.duration || getNoteDuration();
             const sustainDuration = item.sustainDuration || 0;
-            const noteEndTime = currentTime + Math.max(noteDuration, sustainDuration);
-
-            maxSustainEndTime = Math.max(maxSustainEndTime, noteEndTime);
-            currentTime += noteDuration;
+            
+            // 音符的开始时间 = 当前累计的基本时长
+            const noteStartTime = totalBasicDuration;
+            // 音符的结束时间 = 开始时间 + 基本时长 + 延音时长
+            const noteEndTime = noteStartTime + noteDuration + sustainDuration;
+            
+            maxEndTime = Math.max(maxEndTime, noteEndTime);
+            totalBasicDuration += noteDuration;
         }
     });
-
-    // 总时长是基本时长和所有延音结束时间的最大值
-    return Math.max(currentTime, maxSustainEndTime);
+    
+    return maxEndTime;
 }
 
 // 解析带引用的数值（支持t和f引用）
@@ -1206,7 +1212,7 @@ function stopPlayback() {
     updateProgressBar(0, 1);
 }
 
-// 继续播放
+// 继续播放（更新进度显示）
 async function continuePlayback() {
     if (!isPlaying) return;
 
@@ -1215,7 +1221,7 @@ async function continuePlayback() {
         clearInterval(playbackInterval);
     }
 
-    // 设置进度更新定时器（只用于显示，无交互）
+    // 设置进度更新定时器
     playbackInterval = setInterval(() => {
         if (!isPlaying) return;
 
@@ -1233,7 +1239,7 @@ async function continuePlayback() {
     await playFromIndex(currentPlaybackIndex);
 }
 
-// 从指定索引开始播放（支持延音重叠）
+// 从指定索引开始播放（支持延音作为延长值）
 async function playFromIndex(startIndex) {
     if (!isPlaying) return;
 
@@ -1244,7 +1250,7 @@ async function playFromIndex(startIndex) {
 
     // 存储所有活跃的延音音符及其释放时间
     const activeSustains = new Map();
-    let currentTime = 0;
+    let currentTime = 0; // 当前累计时间
 
     for (let i = startIndex; i < sequence.length; i++) {
         if (!isPlaying) break;
@@ -1254,11 +1260,11 @@ async function playFromIndex(startIndex) {
 
         if (item.isRest) {
             // 处理休止符 - 只等待基本时长
-            const restDuration = item.duration * 1000;
-            currentTime += item.duration;
-
+            const restDuration = item.duration;
+            currentTime += restDuration;
+            
             await new Promise(resolve => {
-                const timeout = setTimeout(resolve, restDuration);
+                const timeout = setTimeout(resolve, restDuration * 1000);
                 const checkStop = setInterval(() => {
                     if (!isPlaying) {
                         clearTimeout(timeout);
@@ -1294,6 +1300,8 @@ async function playFromIndex(startIndex) {
             }
 
             if (chordNotes.length > 0) {
+                const chordStartTime = currentTime;
+
                 // 播放和弦前高亮
                 if (!isHideMode) {
                     chordNotes.forEach(chordNote => {
@@ -1310,7 +1318,7 @@ async function playFromIndex(startIndex) {
                     if (sustainDuration > 0) {
                         // 有延音：触发攻击，记录释放时间
                         getSampler().triggerAttack(chordNote.note, undefined, normalizedVelocity);
-                        const releaseTime = Date.now() + sustainDuration * 1000;
+                        const releaseTime = Date.now() + (chordNote.duration + sustainDuration) * 1000;
                         activeSustains.set(chordNote.note, releaseTime);
                     } else {
                         // 无延音：正常播放
@@ -1318,6 +1326,7 @@ async function playFromIndex(startIndex) {
                     }
                 });
 
+                // 更新当前时间（增加和弦的基本时长）
                 currentTime += maxNoteDuration;
 
                 // 只等待和弦的基本时长，不等待延音
@@ -1349,6 +1358,7 @@ async function playFromIndex(startIndex) {
             const noteDuration = item.duration || getNoteDuration();
             const sustainDuration = item.sustainDuration || 0;
             const velocity = item.velocity || getDefaultVelocity();
+            const noteStartTime = currentTime;
 
             // 播放前高亮
             if (!isHideMode) {
@@ -1360,15 +1370,16 @@ async function playFromIndex(startIndex) {
             const normalizedVelocity = Math.max(0, Math.min(127, velocity)) / 127;
 
             if (sustainDuration > 0) {
-                // 有延音：触发攻击，记录释放时间
+                // 有延音：触发攻击，记录释放时间（开始时间 + 基本时长 + 延音时长）
                 getSampler().triggerAttack(noteToPlay, undefined, normalizedVelocity);
-                const releaseTime = Date.now() + sustainDuration * 1000;
+                const releaseTime = Date.now() + (noteDuration + sustainDuration) * 1000;
                 activeSustains.set(noteToPlay, releaseTime);
             } else {
                 // 无延音：正常播放
                 getSampler().triggerAttackRelease(noteToPlay, noteDuration, undefined, normalizedVelocity);
             }
 
+            // 更新当前时间（增加音符的基本时长）
             currentTime += noteDuration;
 
             // 只等待音符的基本时长，不等待延音
@@ -1469,7 +1480,7 @@ function findNoteForSolfege(solfegeStr, solfegeNoteMap, useDefaultMap) {
     return null;
 }
 
-// 播放唱名序列（支持延音重叠）
+// 播放唱名序列（支持延音作为延长值）
 async function playSolfegeSequence() {
     if (!isAudioReady()) {
         MessageUtils.showWarning("音源尚未加载完成，请稍候");
@@ -1505,7 +1516,7 @@ async function playSolfegeSequence() {
     currentPlaybackSequence = parsedSequence;
     currentPlaybackIndex = 0;
 
-    // 使用新的总时长计算函数 - 替换原来的计算逻辑
+    // 使用修正后的总时长计算函数
     totalPlaybackDuration = calculateTotalDuration(parsedSequence);
     playbackStartTime = Date.now();
 
@@ -1524,16 +1535,18 @@ async function playSolfegeSequence() {
         }
 
         // 开始播放
-        await continuePlayback();
+        await playFromIndex(0);
+
+        if (isPlaying) {
+            MessageUtils.showSuccess("唱名序列播放完成！");
+        }
 
     } catch (error) {
         console.error("播放错误:", error);
         MessageUtils.showError("播放失败：" + error.message);
-        stopPlayback();
     } finally {
-        if (!isPlaying) {
-            randomBtn.disabled = false;
-        }
+        stopPlayback();
+        randomBtn.disabled = false;
     }
 }
 
