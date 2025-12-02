@@ -1158,15 +1158,35 @@ function parseValueWithReference(valueStr, referenceType, baseValue) {
 }
 
 
-// 更新进度条
+// 更新进度条显示
 function updateProgressBar(currentTime, totalTime) {
-    const progressPercent = (currentTime / totalTime) * 100;
-    progressFill.style.width = `${progressPercent}%`;
+    // 避免除零错误
+    if (totalTime <= 0) totalTime = 0.001;
+    
+    const progressPercent = Math.min(100, (currentTime / totalTime) * 100);
+    if (progressFill) {
+        progressFill.style.width = `${progressPercent}%`;
+    }
 
-    // 使用新的格式化函数显示时间
-    const currentFormatted = formatSecondsByTotal(currentTime, totalTime);
-    const totalFormatted = formatSecondsByTotal(totalTime, totalTime);
-    progressTime.textContent = `${currentFormatted} / ${totalFormatted}`;
+    // 格式化时间显示（保留适当的小数位数）
+    const formatTime = (seconds) => {
+        if (seconds < 60) {
+            // 显示秒，保留1位小数
+            return seconds.toFixed(1) + '秒';
+        } else {
+            // 显示分:秒
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = seconds % 60;
+            return `${minutes}:${remainingSeconds.toFixed(0).padStart(2, '0')}`;
+        }
+    };
+
+    const currentFormatted = formatTime(currentTime);
+    const totalFormatted = formatTime(totalTime);
+    
+    if (progressTime) {
+        progressTime.textContent = `${currentFormatted} / ${totalFormatted}`;
+    }
 }
 
 // 格式化为秒的函数
@@ -1210,36 +1230,12 @@ function stopPlayback() {
     // 隐藏进度条
     progressContainer.classList.remove('visible');
     updateProgressBar(0, 1);
+    
+    randomBtn.disabled = false;
 }
 
-// 继续播放（更新进度显示）
-async function continuePlayback() {
-    if (!isPlaying) return;
 
-    // 清除之前的定时器
-    if (playbackInterval) {
-        clearInterval(playbackInterval);
-    }
-
-    // 设置进度更新定时器
-    playbackInterval = setInterval(() => {
-        if (!isPlaying) return;
-
-        const currentTime = (Date.now() - playbackStartTime) / 1000;
-        updateProgressBar(Math.min(currentTime, totalPlaybackDuration), totalPlaybackDuration);
-
-        // 检查是否播放完成
-        if (currentTime >= totalPlaybackDuration) {
-            stopPlayback();
-            MessageUtils.showSuccess("唱名序列播放完成！");
-        }
-    }, 100);
-
-    // 从当前索引开始播放
-    await playFromIndex(currentPlaybackIndex);
-}
-
-// 从指定索引开始播放（支持延音作为延长值）
+// 从指定索引开始播放（支持延音作为延长值，实时更新进度）
 async function playFromIndex(startIndex) {
     if (!isPlaying) return;
 
@@ -1252,11 +1248,35 @@ async function playFromIndex(startIndex) {
     const activeSustains = new Map();
     let currentTime = 0; // 当前累计时间
 
+    // 设置进度更新定时器
+    const progressUpdateInterval = setInterval(() => {
+        if (!isPlaying) {
+            clearInterval(progressUpdateInterval);
+            return;
+        }
+        
+        const elapsedTime = (Date.now() - playbackStartTime) / 1000;
+        updateProgressBar(Math.min(elapsedTime, totalPlaybackDuration), totalPlaybackDuration);
+        
+        // 检查是否播放完成
+        if (elapsedTime >= totalPlaybackDuration) {
+            clearInterval(progressUpdateInterval);
+            if (isPlaying) {
+                stopPlayback();
+                MessageUtils.showSuccess("唱名序列播放完成！");
+            }
+        }
+    }, 100);
+
     for (let i = startIndex; i < sequence.length; i++) {
         if (!isPlaying) break;
 
         const item = sequence[i];
         currentPlaybackIndex = i;
+
+        // 更新进度显示
+        const elapsedTime = (Date.now() - playbackStartTime) / 1000;
+        updateProgressBar(Math.min(elapsedTime, totalPlaybackDuration), totalPlaybackDuration);
 
         if (item.isRest) {
             // 处理休止符 - 只等待基本时长
@@ -1264,14 +1284,24 @@ async function playFromIndex(startIndex) {
             currentTime += restDuration;
             
             await new Promise(resolve => {
-                const timeout = setTimeout(resolve, restDuration * 1000);
-                const checkStop = setInterval(() => {
+                const startRestTime = Date.now();
+                const checkInterval = setInterval(() => {
                     if (!isPlaying) {
-                        clearTimeout(timeout);
-                        clearInterval(checkStop);
+                        clearInterval(checkInterval);
+                        resolve();
+                        return;
+                    }
+                    
+                    const restElapsed = (Date.now() - startRestTime) / 1000;
+                    if (restElapsed >= restDuration) {
+                        clearInterval(checkInterval);
                         resolve();
                     }
-                }, 100);
+                    
+                    // 实时更新进度
+                    const totalElapsed = (Date.now() - playbackStartTime) / 1000;
+                    updateProgressBar(Math.min(totalElapsed, totalPlaybackDuration), totalPlaybackDuration);
+                }, 50);
             });
             continue;
         }
@@ -1329,25 +1359,32 @@ async function playFromIndex(startIndex) {
                 // 更新当前时间（增加和弦的基本时长）
                 currentTime += maxNoteDuration;
 
-                // 只等待和弦的基本时长，不等待延音
+                // 只等待和弦的基本时长，不等待延音，同时实时更新进度
                 await new Promise(resolve => {
-                    const timeout = setTimeout(() => {
-                        if (!isHideMode) {
-                            chordNotes.forEach(chordNote => {
-                                const key = document.querySelector(`.key[data-note="${chordNote.note}"]`);
-                                if (key) key.classList.remove('playing');
-                            });
-                        }
-                        resolve();
-                    }, maxNoteDuration * 1000);
-
-                    const checkStop = setInterval(() => {
+                    const startChordTime = Date.now();
+                    const checkInterval = setInterval(() => {
                         if (!isPlaying) {
-                            clearTimeout(timeout);
-                            clearInterval(checkStop);
+                            clearInterval(checkInterval);
+                            resolve();
+                            return;
+                        }
+                        
+                        const chordElapsed = (Date.now() - startChordTime) / 1000;
+                        if (chordElapsed >= maxNoteDuration) {
+                            clearInterval(checkInterval);
+                            if (!isHideMode) {
+                                chordNotes.forEach(chordNote => {
+                                    const key = document.querySelector(`.key[data-note="${chordNote.note}"]`);
+                                    if (key) key.classList.remove('playing');
+                                });
+                            }
                             resolve();
                         }
-                    }, 100);
+                        
+                        // 实时更新进度
+                        const totalElapsed = (Date.now() - playbackStartTime) / 1000;
+                        updateProgressBar(Math.min(totalElapsed, totalPlaybackDuration), totalPlaybackDuration);
+                    }, 50);
                 });
             }
         } else {
@@ -1382,28 +1419,35 @@ async function playFromIndex(startIndex) {
             // 更新当前时间（增加音符的基本时长）
             currentTime += noteDuration;
 
-            // 只等待音符的基本时长，不等待延音
+            // 只等待音符的基本时长，不等待延音，同时实时更新进度
             await new Promise(resolve => {
-                const timeout = setTimeout(() => {
-                    if (!isHideMode) {
-                        const key = document.querySelector(`.key[data-note="${noteToPlay}"]`);
-                        if (key) key.classList.remove('playing');
-                    }
-                    resolve();
-                }, noteDuration * 1000);
-
-                const checkStop = setInterval(() => {
+                const startNoteTime = Date.now();
+                const checkInterval = setInterval(() => {
                     if (!isPlaying) {
-                        clearTimeout(timeout);
-                        clearInterval(checkStop);
+                        clearInterval(checkInterval);
+                        resolve();
+                        return;
+                    }
+                    
+                    const noteElapsed = (Date.now() - startNoteTime) / 1000;
+                    if (noteElapsed >= noteDuration) {
+                        clearInterval(checkInterval);
+                        if (!isHideMode) {
+                            const key = document.querySelector(`.key[data-note="${noteToPlay}"]`);
+                            if (key) key.classList.remove('playing');
+                        }
                         resolve();
                     }
-                }, 100);
+                    
+                    // 实时更新进度
+                    const totalElapsed = (Date.now() - playbackStartTime) / 1000;
+                    updateProgressBar(Math.min(totalElapsed, totalPlaybackDuration), totalPlaybackDuration);
+                }, 50);
             });
         }
     }
 
-    // 播放完所有音符后，等待所有延音结束
+    // 播放完所有音符后，等待所有延音结束，同时继续更新进度
     if (isPlaying && activeSustains.size > 0) {
         const now = Date.now();
         const releaseTimes = Array.from(activeSustains.values());
@@ -1412,29 +1456,36 @@ async function playFromIndex(startIndex) {
 
         if (remainingTime > 0) {
             await new Promise(resolve => {
-                const timeout = setTimeout(() => {
-                    // 释放所有延音音符
-                    activeSustains.forEach((releaseTime, note) => {
-                        if (Date.now() >= releaseTime) {
-                            getSampler().triggerRelease(note);
-                            activeSustains.delete(note);
-                        }
-                    });
-                    resolve();
-                }, remainingTime);
-
-                const checkStop = setInterval(() => {
+                const startSustainTime = Date.now();
+                const sustainCheckInterval = setInterval(() => {
                     if (!isPlaying) {
-                        clearTimeout(timeout);
-                        clearInterval(checkStop);
+                        clearInterval(sustainCheckInterval);
                         // 停止时立即释放所有音符
                         activeSustains.forEach((releaseTime, note) => {
                             getSampler().triggerRelease(note);
                         });
                         activeSustains.clear();
                         resolve();
+                        return;
                     }
-                }, 100);
+                    
+                    const sustainElapsed = Date.now() - startSustainTime;
+                    if (sustainElapsed >= remainingTime) {
+                        clearInterval(sustainCheckInterval);
+                        // 释放所有延音音符
+                        activeSustains.forEach((releaseTime, note) => {
+                            if (Date.now() >= releaseTime) {
+                                getSampler().triggerRelease(note);
+                                activeSustains.delete(note);
+                            }
+                        });
+                        resolve();
+                    }
+                    
+                    // 实时更新进度
+                    const totalElapsed = (Date.now() - playbackStartTime) / 1000;
+                    updateProgressBar(Math.min(totalElapsed, totalPlaybackDuration), totalPlaybackDuration);
+                }, 50);
             });
         }
 
@@ -1443,6 +1494,14 @@ async function playFromIndex(startIndex) {
             getSampler().triggerRelease(note);
         });
         activeSustains.clear();
+    }
+
+    // 清除进度更新定时器
+    clearInterval(progressUpdateInterval);
+    
+    // 最终更新一次进度条
+    if (isPlaying) {
+        updateProgressBar(totalPlaybackDuration, totalPlaybackDuration);
     }
 }
 
@@ -1480,7 +1539,7 @@ function findNoteForSolfege(solfegeStr, solfegeNoteMap, useDefaultMap) {
     return null;
 }
 
-// 播放唱名序列（支持延音作为延长值）
+// 播放唱名序列（支持延音作为延长值，实时进度显示）
 async function playSolfegeSequence() {
     if (!isAudioReady()) {
         MessageUtils.showWarning("音源尚未加载完成，请稍候");
@@ -1534,7 +1593,7 @@ async function playSolfegeSequence() {
             MessageUtils.showStatusMessage("音频上下文已启动，正在播放唱名序列...", 0);
         }
 
-        // 开始播放
+        // 开始播放（直接调用 playFromIndex，不再通过 continuePlayback）
         await playFromIndex(0);
 
         if (isPlaying) {
