@@ -35,7 +35,7 @@
                     <button id="themeToggle">切换主题</button>
                 </div>
                 <h1>音感训练器</h1>
-                <p class="subtitle">选择音符数量，双击选择音符并输入唱名，创建自定义训练序列</p>
+                <p class="subtitle">输入音符数量，双击选择音符并输入唱名，创建自定义训练序列</p>
             </header>
 
             <div class="status-message" id="statusMessage">音源加载完成，可以开始使用</div>
@@ -106,6 +106,20 @@
                         <div class="knob-controls">
                             <div class="knob-btn" id="durationRandomRangeDecrease">-</div>
                             <div class="knob-btn" id="durationRandomRangeIncrease">+</div>
+                        </div>
+                    </div>
+                    <!-- 延音率旋钮 -->
+                    <div class="knob-container">
+                        <div class="knob-label">默认延音率</div>
+                        <div class="knob" id="sustainRateKnob">
+                            <div class="knob-inner">
+                                <div class="knob-value" id="sustainRateValue">0%</div>
+                                <div class="knob-indicator" id="sustainRateIndicator"></div>
+                            </div>
+                        </div>
+                        <div class="knob-controls">
+                            <div class="knob-btn" id="sustainRateDecrease">-</div>
+                            <div class="knob-btn" id="sustainRateIncrease">+</div>
                         </div>
                     </div>
 

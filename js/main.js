@@ -6,6 +6,7 @@ let isHideMode = false;
 // 随机范围控制变量
 let durationRandomRange = 0.5; // 默认50%
 let velocityRandomRange = 0.5; // 默认50%
+let sustainRate = 0.0; // 默认延音率 0%
 
 // 初始化函数
 async function init() {
@@ -48,6 +49,7 @@ async function init() {
         // 初始化随机范围旋钮
         setDurationRandomRange(0.5); // 默认50%
         setVelocityRandomRange(0.5); // 默认50%
+        setSustainRate(0.0); // 默认0%
 
         // 更新旋钮指示器位置
         updateRandomRangeKnobIndicators();
@@ -314,6 +316,20 @@ function setupEventListeners() {
         setDurationRandomRange(Math.min(1.0, durationRandomRange + 0.1));
     });
 
+    // 延音率旋钮事件监听
+    document.getElementById('sustainRateKnob').addEventListener('click', (e) => {
+        handleSustainRateKnobClick(e);
+    });
+
+    document.getElementById('sustainRateDecrease').addEventListener('click', () => {
+        setSustainRate(Math.max(0.0, sustainRate - 0.1));
+    });
+
+    document.getElementById('sustainRateIncrease').addEventListener('click', () => {
+        setSustainRate(Math.min(1.0, sustainRate + 0.1));
+    });
+
+
     // 力度随机范围旋钮事件监听
     document.getElementById('velocityRandomRangeKnob').addEventListener('click', (e) => {
         handleRandomRangeKnobClick(e, 'velocity');
@@ -329,6 +345,34 @@ function setupEventListeners() {
 
     // 初始验证
     checkAllValidations();
+}
+
+// 添加处理延音率旋钮点击的函数
+function handleSustainRateKnobClick(e) {
+    const knob = e.currentTarget;
+    const rect = knob.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+
+    // 计算角度 (0-360度)
+    const angle = Math.atan2(e.clientY - centerY, e.clientX - centerX) * (180 / Math.PI);
+    const normalizedAngle = (angle + 360) % 360;
+
+    // 将角度映射到0%-100%范围（10%步长）
+    const steps = 10; // 0%, 10%, 20%, ..., 100%
+    const stepAngle = 360 / steps;
+    const step = Math.round(normalizedAngle / stepAngle);
+    const newValue = Math.max(0.0, Math.min(1.0, (step / steps) || 0.0));
+
+    setSustainRate(newValue);
+}
+
+// 添加设置延音率的函数
+function setSustainRate(value) {
+    sustainRate = Math.round(value * 10) / 10; // 确保是0.1的倍数
+    document.getElementById('sustainRateValue').textContent = Math.round(sustainRate * 100) + '%';
+    updateRandomRangeKnobIndicators();
+    MessageUtils.showStatusMessage(`默认延音率已设置为 ${Math.round(sustainRate * 100)}% (0-4倍音符时长)`);
 }
 
 // 检查所有验证是否通过
@@ -519,6 +563,11 @@ function updateRandomRangeKnobIndicators() {
     const durationAngle = ((durationRandomRange - 0.1) / 0.9) * 360;
     document.getElementById('durationRandomRangeIndicator').style.transform =
         `translateX(-50%) rotate(${durationAngle}deg)`;
+
+    // 延音率旋钮：0%-100%映射到0-360度
+    const sustainAngle = (sustainRate) * 360;
+    document.getElementById('sustainRateIndicator').style.transform =
+        `translateX(-50%) rotate(${sustainAngle}deg)`;
 
     // 力度随机范围旋钮：10%-100%映射到0-360度
     const velocityAngle = ((velocityRandomRange - 0.1) / 0.9) * 360;
