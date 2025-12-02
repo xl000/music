@@ -386,7 +386,7 @@ function setSustainRate(value) {
     document.getElementById('sustainRateValue').textContent = Math.round(sustainRate * 100) + '%';
     updateRandomRangeKnobIndicators();
     MessageUtils.showStatusMessage(`默认延音率已设置为 ${Math.round(sustainRate * 100)}% (0-4倍音符时长)`);
-    log(`默认延音率已设置为 ${Math.round(sustainRate * 100)}% (0-4倍音符时长)`);
+    console.log(`默认延音率已设置为 ${Math.round(sustainRate * 100)}% (0-4倍音符时长)`);
 
 }
 
