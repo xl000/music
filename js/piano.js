@@ -43,14 +43,14 @@ function initAudioLoad() {
         // 先检查sessionStorage中是否有缓存的音源数据
         const cachedAudioData = sessionStorage.getItem('pianoAudioData');
         const cachedLoadTime = sessionStorage.getItem('pianoAudioLoadTime');
-        
+
         // 如果缓存存在且是最近加载的（比如1小时内），直接使用缓存
         if (cachedAudioData && cachedLoadTime && (Date.now() - parseInt(cachedLoadTime)) < 3600000) {
             try {
                 console.log("从sessionStorage加载缓存的音源数据");
                 updateLoadProgress(100, "从缓存加载音源完成！");
                 isAudioLoaded = true;
-                
+
                 // 创建采样器使用缓存状态
                 sampler = new Tone.Sampler({
                     urls: soundFiles,
@@ -58,21 +58,21 @@ function initAudioLoad() {
                     onload: () => {
                         // 将sampler暴露给全局，供其他模块使用
                         window.sampler = sampler;
-                        
+
                         setTimeout(() => {
                             switchToMainInterface();
                             resolve(sampler);
                         }, 100);
                     }
                 }).toDestination();
-                
+
                 return;
             } catch (error) {
                 console.error("缓存加载失败，重新加载音源:", error);
                 // 如果缓存加载失败，继续正常加载流程
             }
         }
-        
+
         // 正常加载音源
         updateLoadProgress(0, "开始加载音源...");
 
@@ -101,7 +101,7 @@ function initAudioLoad() {
 
                 // 将sampler暴露给全局，供其他模块使用
                 window.sampler = sampler;
-                
+
                 setTimeout(() => {
                     // 切换到主界面
                     switchToMainInterface();
@@ -1114,7 +1114,7 @@ function parseValueWithReference(valueStr, referenceType, baseValue) {
 function updateProgressBar(currentTime, totalTime) {
     const progressPercent = (currentTime / totalTime) * 100;
     progressFill.style.width = `${progressPercent}%`;
-    
+
     // 使用新的格式化函数显示时间
     const currentFormatted = formatSecondsByTotal(currentTime, totalTime);
     const totalFormatted = formatSecondsByTotal(totalTime, totalTime);
@@ -1126,11 +1126,11 @@ function formatSecondsByTotal(seconds, totalSeconds) {
     // 获取总时长的小数位数
     const totalSecondsStr = totalSeconds.toString();
     let decimalPlaces = 0;
-    
+
     if (totalSecondsStr.includes('.')) {
         decimalPlaces = totalSecondsStr.split('.')[1].length;
     }
-    
+
     // 格式化当前时间，保持与总时长相同的小数位数
     return seconds.toFixed(decimalPlaces);
 }
@@ -1241,7 +1241,7 @@ async function playFromIndex(startIndex) {
                 // 播放和弦音符
                 chordNotes.forEach(chordNote => {
                     const normalizedVelocity = Math.max(0, Math.min(127, chordNote.velocity)) / 127;
-                    
+
                     if (chordNote.sustainDuration > 0) {
                         // 有延音的和弦音符
                         getSampler().triggerAttack(chordNote.note, undefined, normalizedVelocity);
@@ -1257,7 +1257,7 @@ async function playFromIndex(startIndex) {
                 // 等待最长的音符播放完成
                 const maxSustainDuration = Math.max(...chordNotes.map(n => n.sustainDuration));
                 const waitTime = Math.max(maxDuration, maxSustainDuration) * 1000;
-                
+
                 await new Promise(resolve => {
                     const timeout = setTimeout(() => {
                         if (!isHideMode) {
@@ -1306,7 +1306,7 @@ async function playFromIndex(startIndex) {
 
             // 等待时间取音符时长和延音时长的较大值
             const waitTime = Math.max(item.duration, sustainDuration) * 1000;
-            
+
             await new Promise(resolve => {
                 const timeout = setTimeout(() => {
                     if (!isHideMode) {
@@ -1398,11 +1398,21 @@ async function playSolfegeSequence() {
     currentPlaybackSequence = parsedSequence;
     currentPlaybackIndex = 0;
 
-    // 计算总时长
+    // 计算总时长（包含延音时长）
     totalPlaybackDuration = parseFloat(parsedSequence.reduce((total, item) => {
-        if (item.isRest) return total + item.duration;
-        if (item.isChord) return total + Math.max(...item.chord.map(note => note.duration));
-        return total + item.duration;
+        if (item.isRest) {
+            return total + item.duration;
+        } else if (item.isChord) {
+            // 对于和弦，取所有音符的最大时长（包括延音）
+            const maxNoteDuration = Math.max(...item.chord.map(note => note.duration));
+            const maxSustainDuration = Math.max(0, ...item.chord.map(note => note.sustainDuration || 0));
+            return total + Math.max(maxNoteDuration, maxSustainDuration);
+        } else {
+            // 对于单个音符，取音符时长和延音时长的较大值
+            const noteDuration = item.duration;
+            const sustainDuration = item.sustainDuration || 0;
+            return total + Math.max(noteDuration, sustainDuration);
+        }
     }, 0).toFixed(3)); // 保留3位小数
 
     playbackStartTime = Date.now();
@@ -1475,7 +1485,7 @@ function playNote(noteName, duration, velocity, sustainDuration = 0) {
 
     try {
         const normalizedVelocity = Math.max(0, Math.min(127, velocity)) / 127;
-        
+
         if (sustainDuration > 0) {
             // 有延音：先触发攻击，然后根据延音时长设置释放
             getSampler().triggerAttack(noteName, undefined, normalizedVelocity);
@@ -1497,29 +1507,29 @@ function convertSolfegeToAbsolutePitch(inputText) {
         console.log("输入为空");
         return "";
     }
-    
+
     const solfegeNoteMap = createSolfegeNoteMap();
     const useDefaultMap = Object.keys(solfegeNoteMap).length === 0;
-    
+
     // 解析输入文本，支持逗号和中文逗号分隔
     const items = inputText.split(/[,，]/).map(item => item.trim()).filter(item => item !== '');
-    
+
     const convertedItems = items.map(item => {
         // 处理空闲时间（以下划线开头，只有时长参数）
         if (item.startsWith('_')) {
             return item; // 保持空闲时间原样
         }
-        
+
         // 处理和弦（括号内的内容）
-        if ((item.startsWith('(') || item.startsWith('（')) && 
+        if ((item.startsWith('(') || item.startsWith('（')) &&
             (item.endsWith(')') || item.endsWith('）'))) {
             return convertChordToAbsolute(item, solfegeNoteMap, useDefaultMap);
         }
-        
+
         // 处理单个音符
         return convertSingleNoteToAbsolute(item, solfegeNoteMap, useDefaultMap);
     });
-    
+
     const result = convertedItems.join(', ');
     console.log("转换结果:", result);
     return result;
