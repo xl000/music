@@ -277,7 +277,7 @@ button:disabled {
     font-size: 0.95rem;
     /* 减小字体大小 */
     font-weight: bold;
-    -moz-appearance: textfield;
+    /* -moz-appearance: textfield; */
 }
 
 .bpm-input::-webkit-outer-spin-button,

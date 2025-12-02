@@ -883,37 +883,76 @@ function generateChromaticScale() {
     scaleNotes = [...descendingScale, ...ascendingScale];
 
     solfegeMap = {};
-    const ascendingSolfege = [
-        "do", "do#", "re", "re#", "mi", "fa", "fa#", "sol", "sol#", "la", "la#", "si", "do"
-    ];
+    
+    // 修改：根据唱名类型选择不同的唱名映射
+    if (notationType === "number") {
+        // 数字唱名模式 - 修正：升号在数字右边
+        const ascendingNumbers = [
+            "1", "1#", "2", "2#", "3", "4", "4#", "5", "5#", "6", "6#", "7", "1"
+        ];
 
-    const descendingSolfege = [
-        "do", "si", "la#", "la", "sol#", "sol", "fa#", "fa", "mi", "re#", "re", "do#", "do"
-    ];
+        const descendingNumbers = [
+            "1", "7", "6#", "6", "5#", "5", "4#", "4", "3", "2#", "2", "1#", "1"
+        ];
 
-    const ascendingDotPositions = [
-        "none", "none", "none", "none", "none", "none", "none", "none", "none", "none", "none", "none", "above"
-    ];
+        const ascendingDotPositions = [
+            "none", "none", "none", "none", "none", "none", "none", "none", "none", "none", "none", "none", "above"
+        ];
 
-    const descendingDotPositions = [
-        "none", "below", "below", "below", "below", "below", "below", "below", "below", "below", "below", "below", "below"
-    ];
+        const descendingDotPositions = [
+            "none", "below", "below", "below", "below", "below", "below", "below", "below", "below", "below", "below", "below"
+        ];
 
-    const solfegeNames = [
-        ...descendingSolfege,
-        ...ascendingSolfege
-    ];
+        const numberNames = [
+            ...descendingNumbers,
+            ...ascendingNumbers
+        ];
 
-    const dotPositions = [
-        ...descendingDotPositions,
-        ...ascendingDotPositions
-    ];
+        const dotPositions = [
+            ...descendingDotPositions,
+            ...ascendingDotPositions
+        ];
 
-    for (let i = 0; i < scaleNotes.length; i++) {
-        solfegeMap[scaleNotes[i]] = {
-            name: solfegeNames[i],
-            dot: dotPositions[i]
-        };
+        for (let i = 0; i < scaleNotes.length; i++) {
+            solfegeMap[scaleNotes[i]] = {
+                name: numberNames[i],
+                dot: dotPositions[i]
+            };
+        }
+    } else {
+        // 字母唱名模式（保持原逻辑不变）
+        const ascendingSolfege = [
+            "do", "do#", "re", "re#", "mi", "fa", "fa#", "sol", "sol#", "la", "la#", "si", "do"
+        ];
+
+        const descendingSolfege = [
+            "do", "si", "la#", "la", "sol#", "sol", "fa#", "fa", "mi", "re#", "re", "do#", "do"
+        ];
+
+        const ascendingDotPositions = [
+            "none", "none", "none", "none", "none", "none", "none", "none", "none", "none", "none", "none", "above"
+        ];
+
+        const descendingDotPositions = [
+            "none", "below", "below", "below", "below", "below", "below", "below", "below", "below", "below", "below", "below"
+        ];
+
+        const solfegeNames = [
+            ...descendingSolfege,
+            ...ascendingSolfege
+        ];
+
+        const dotPositions = [
+            ...descendingDotPositions,
+            ...ascendingDotPositions
+        ];
+
+        for (let i = 0; i < scaleNotes.length; i++) {
+            solfegeMap[scaleNotes[i]] = {
+                name: solfegeNames[i],
+                dot: dotPositions[i]
+            };
+        }
     }
 }
 
@@ -972,7 +1011,8 @@ function createScaleDisplay() {
         }
     }
 
-    if (notationType === "number") {
+    if (notationType === "number" && scaleType !== "chromatic") {
+        // 只对非半音音阶进行转换，半音音阶已经在 generateChromaticScale 中处理了
         stepSolfege = stepSolfege.map(name => {
             if (name.startsWith("#") || name.startsWith("b")) {
                 const baseName = name.substring(1);
