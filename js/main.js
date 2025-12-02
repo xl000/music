@@ -316,19 +316,32 @@ function setupEventListeners() {
         setDurationRandomRange(Math.min(1.0, durationRandomRange + 0.1));
     });
 
-    // 延音率旋钮事件监听
-    document.getElementById('sustainRateKnob').addEventListener('click', (e) => {
-        handleSustainRateKnobClick(e);
-    });
+    // 延音率旋钮事件监听 - 修复：确保在DOM加载完成后添加事件监听
+    const sustainRateKnob = document.getElementById('sustainRateKnob');
+    const sustainRateDecrease = document.getElementById('sustainRateDecrease');
+    const sustainRateIncrease = document.getElementById('sustainRateIncrease');
 
-    document.getElementById('sustainRateDecrease').addEventListener('click', () => {
-        setSustainRate(Math.max(0.0, sustainRate - 0.1));
-    });
+    if (sustainRateKnob) {
+        sustainRateKnob.addEventListener('click', (e) => {
+            handleSustainRateKnobClick(e);
+        });
+    }
 
-    document.getElementById('sustainRateIncrease').addEventListener('click', () => {
-        setSustainRate(Math.min(1.0, sustainRate + 0.1));
-    });
+    if (sustainRateDecrease) {
+        sustainRateDecrease.addEventListener('click', (e) => {
+            e.stopPropagation(); // 防止事件冒泡
+            const newValue = Math.max(0.0, sustainRate - 0.1);
+            setSustainRate(parseFloat(newValue.toFixed(1))); // 确保精度
+        });
+    }
 
+    if (sustainRateIncrease) {
+        sustainRateIncrease.addEventListener('click', (e) => {
+            e.stopPropagation(); // 防止事件冒泡
+            const newValue = Math.min(1.0, sustainRate + 0.1);
+            setSustainRate(parseFloat(newValue.toFixed(1))); // 确保精度
+        });
+    }
 
     // 力度随机范围旋钮事件监听
     document.getElementById('velocityRandomRangeKnob').addEventListener('click', (e) => {
@@ -373,6 +386,8 @@ function setSustainRate(value) {
     document.getElementById('sustainRateValue').textContent = Math.round(sustainRate * 100) + '%';
     updateRandomRangeKnobIndicators();
     MessageUtils.showStatusMessage(`默认延音率已设置为 ${Math.round(sustainRate * 100)}% (0-4倍音符时长)`);
+    log(`默认延音率已设置为 ${Math.round(sustainRate * 100)}% (0-4倍音符时长)`);
+
 }
 
 // 检查所有验证是否通过

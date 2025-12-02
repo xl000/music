@@ -839,7 +839,7 @@ body.pink-theme .knob-btn {
     justify-content: center;
     flex-wrap: wrap;
     gap: 0px; /* 减小间距，从40px改为0px，让旋钮更靠近 */
-    width: 100%;
+    width: 80%;
     padding: 20px 0;
     border-top: 1px solid rgba(178, 235, 242, 0.5);
     margin-top: 10px;
