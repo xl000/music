@@ -163,6 +163,20 @@
         let loadProgress = 0;
         let isAudioLoaded = false;
         let globalSampler = null;
+        let isAudioContextStarted = false; // 新增：标记音频上下文是否已启动
+
+        // 启动音频上下文的函数
+        async function startAudioContext() {
+            if (isAudioContextStarted) return;
+            
+            try {
+                await Tone.start();
+                console.log("AudioContext started successfully");
+                isAudioContextStarted = true;
+            } catch (error) {
+                console.error("Failed to start AudioContext:", error);
+            }
+        }
 
         // 更新加载进度
         function updateLoadProgress(percent, message) {
@@ -354,12 +368,10 @@
                     label.textContent = fullNote;
                     key.appendChild(label);
 
-                    // 点击琴键事件
+                    // 点击琴键事件 - 修复：添加音频上下文启动
                     key.addEventListener('click', async () => {
                         try {
-                            if (Tone.context.state !== 'running') {
-                                await Tone.start();
-                            }
+                            await startAudioContext(); // 确保音频上下文已启动
 
                             key.classList.add('playing');
                             setTimeout(() => key.classList.remove('playing'), 300);
@@ -369,13 +381,11 @@
                         }
                     });
 
-                    // 触摸事件支持
+                    // 触摸事件支持 - 修复：添加音频上下文启动
                     key.addEventListener('touchstart', async (e) => {
                         e.preventDefault();
                         try {
-                            if (Tone.context.state !== 'running') {
-                                await Tone.start();
-                            }
+                            await startAudioContext(); // 确保音频上下文已启动
 
                             key.classList.add('playing');
                             setTimeout(() => key.classList.remove('playing'), 300);
@@ -393,7 +403,7 @@
         // 播放钢琴音符
         async function playNote(noteName, duration = 0.8, startTime = null) {
             try {
-                await Tone.start();
+                await startAudioContext(); // 确保音频上下文已启动
 
                 // 修复：使用传入的startTime而不是Tone.now()
                 const now = startTime !== null ? startTime : Tone.now();
@@ -461,8 +471,11 @@
             }
 
             setupEventListeners() {
-                // 主页面按钮
-                document.getElementById('showPianoBtn').addEventListener('click', () => this.showFullscreenPiano());
+                // 主页面按钮 - 修复：添加音频上下文启动
+                document.getElementById('showPianoBtn').addEventListener('click', async () => {
+                    await startAudioContext(); // 确保音频上下文已启动
+                    this.showFullscreenPiano();
+                });
 
                 // 收起按钮
                 this.collapseBtn.addEventListener('click', () => this.collapseFullscreen());
@@ -570,9 +583,7 @@
                 if (!notes || notes.length === 0) return;
 
                 try {
-                    if (Tone.context.state !== 'running') {
-                        await Tone.start();
-                    }
+                    await startAudioContext(); // 确保音频上下文已启动
 
                     // 修复：使用传入的startTime而不是Tone.now()
                     const actualStartTime = startTime !== null ? startTime : Tone.now() + 0.1;
@@ -742,14 +753,20 @@
             }
 
             // 播放序列（供外部调用）
-            playSequence(sequence, title = "自定义序列") {
-                if (!this.isFullscreen) {
-                    this.showFullscreenPiano();
-                    setTimeout(() => {
+            async playSequence(sequence, title = "自定义序列") {
+                try {
+                    await startAudioContext(); // 确保音频上下文已启动
+                    
+                    if (!this.isFullscreen) {
+                        this.showFullscreenPiano();
+                        setTimeout(() => {
+                            this.startPlayback(sequence, title);
+                        }, 500);
+                    } else {
                         this.startPlayback(sequence, title);
-                    }, 500);
-                } else {
-                    this.startPlayback(sequence, title);
+                    }
+                } catch (error) {
+                    console.error("启动音频上下文失败:", error);
                 }
             }
 
@@ -1069,14 +1086,20 @@
                 }
 
                 // 修改PianoPlayer类的playSequence方法，支持新的序列格式
-                PianoPlayer.prototype.playSequence = function (sequence, title = "自定义序列") {
-                    if (!this.isFullscreen) {
-                        this.showFullscreenPiano();
-                        setTimeout(() => {
+                PianoPlayer.prototype.playSequence = async function (sequence, title = "自定义序列") {
+                    try {
+                        await startAudioContext(); // 确保音频上下文已启动
+                        
+                        if (!this.isFullscreen) {
+                            this.showFullscreenPiano();
+                            setTimeout(() => {
+                                this.startPlayback(sequence, title);
+                            }, 500);
+                        } else {
                             this.startPlayback(sequence, title);
-                        }, 500);
-                    } else {
-                        this.startPlayback(sequence, title);
+                        }
+                    } catch (error) {
+                        console.error("启动音频上下文失败:", error);
                     }
                 };
 
@@ -1146,9 +1169,7 @@
                     if (!notes || notes.length === 0) return;
 
                     try {
-                        if (Tone.context.state !== 'running') {
-                            await Tone.start();
-                        }
+                        await startAudioContext(); // 确保音频上下文已启动
 
                         // 修复：使用传入的startTime而不是Tone.now()
                         const actualStartTime = startTime !== null ? startTime : Tone.now() + 0.1;
