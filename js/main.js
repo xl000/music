@@ -602,12 +602,13 @@ function playEffectSequence() {
     
     try {
         // 调用转换函数
-        const convertedSequence = window.convertSolfegeToAbsolutePitch(inputText);
+        const convertedSequence = convertSolfegeToAbsolutePitch(inputText);
         
         // 将转换后的内容显示在控制台
         console.log("=== 唱名模式转绝对音高朴素模式 ===");
         console.log("原始输入:", inputText);
         console.log("转换结果:", convertedSequence);
+        console.log("当前延音率:", Math.round(getSustainRate() * 100) + "%");
         console.log("转换时间:", new Date().toLocaleString());
         console.log("=== 转换完成 ===");
         

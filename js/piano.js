@@ -1614,40 +1614,6 @@ function playNote(noteName, duration, velocity, sustainDuration = 0) {
     }
 }
 
-// 唱名模式转绝对音高模式函数
-function convertSolfegeToAbsolutePitch(inputText) {
-    if (!inputText || inputText.trim() === '') {
-        console.log("输入为空");
-        return "";
-    }
-
-    const solfegeNoteMap = createSolfegeNoteMap();
-    const useDefaultMap = Object.keys(solfegeNoteMap).length === 0;
-
-    // 解析输入文本，支持逗号和中文逗号分隔
-    const items = inputText.split(/[,，]/).map(item => item.trim()).filter(item => item !== '');
-
-    const convertedItems = items.map(item => {
-        // 处理空闲时间（以下划线开头，只有时长参数）
-        if (item.startsWith('_')) {
-            return item; // 保持空闲时间原样
-        }
-
-        // 处理和弦（括号内的内容）
-        if ((item.startsWith('(') || item.startsWith('（')) &&
-            (item.endsWith(')') || item.endsWith('）'))) {
-            return convertChordToAbsolute(item, solfegeNoteMap, useDefaultMap);
-        }
-
-        // 处理单个音符
-        return convertSingleNoteToAbsolute(item, solfegeNoteMap, useDefaultMap);
-    });
-
-    const result = convertedItems.join(', ');
-    console.log("转换结果:", result);
-    return result;
-}
-
 // 唱名模式转绝对音高朴素模式函数
 function convertSolfegeToAbsolutePitch(inputText) {
     if (!inputText || inputText.trim() === '') {
@@ -1668,12 +1634,31 @@ function convertSolfegeToAbsolutePitch(inputText) {
         if (item.startsWith('_')) {
             // 解析空闲时间
             const restParts = item.split('_').filter(part => part !== '');
-            if (restParts.length >= 2) {
-                const durationStr = restParts[1];
-                const duration = parseValueWithReference(durationStr, 't', baseDuration);
-                return `_${formatDurationDisplay(duration)}`;
+            let result = '_';
+            
+            if (restParts.length >= 1) {
+                // 处理时长部分
+                const durationStr = restParts[0] || '';
+                if (durationStr) {
+                    const duration = parseValueWithReference(durationStr, 't', baseDuration);
+                    result += formatDurationDisplay(duration);
+                } else {
+                    result += formatDurationDisplay(baseDuration);
+                }
+                
+                // 处理延音部分（如果有）
+                if (restParts.length >= 2) {
+                    const sustainStr = restParts[1];
+                    const sustainDuration = parseValueWithReference(sustainStr, 't', baseDuration);
+                    result += '_' + formatDurationDisplay(sustainDuration);
+                } else {
+                    // 即使没有指定延音，也添加默认延音
+                    const sustainDuration = calculateSustainDuration(baseDuration);
+                    result += '_' + formatDurationDisplay(sustainDuration);
+                }
             }
-            return item; // 保持原样
+            
+            return result;
         }
 
         // 处理和弦（括号内的内容）
@@ -1725,31 +1710,37 @@ function convertSingleNoteToAbsolute(item, solfegeNoteMap, useDefaultMap, baseDu
     const resultParts = [absoluteNote];
     
     // 处理时长部分（第二个参数）
+    let parsedDuration = baseDuration;
     if (parts.length >= 2) {
         const durationStr = parts[1];
-        const duration = parseValueWithReference(durationStr, 't', baseDuration);
-        resultParts.push(formatDurationDisplay(duration));
+        parsedDuration = parseValueWithReference(durationStr, 't', baseDuration);
+        resultParts.push(formatDurationDisplay(parsedDuration));
     } else {
         resultParts.push(formatDurationDisplay(baseDuration));
     }
     
     // 处理力度部分（第三个参数）
+    let parsedVelocity = baseVelocity;
     if (parts.length >= 3) {
         const velocityStr = parts[2];
-        const velocity = parseValueWithReference(velocityStr, 'f', baseVelocity);
-        resultParts.push(velocity.toString());
+        parsedVelocity = parseValueWithReference(velocityStr, 'f', baseVelocity);
+        resultParts.push(parsedVelocity.toString());
     } else {
         resultParts.push(baseVelocity.toString());
     }
     
     // 处理延音部分（第四个参数）- 如果有的话
+    let sustainDuration = 0;
     if (parts.length >= 4) {
         const sustainStr = parts[3];
-        const sustainDuration = parseValueWithReference(sustainStr, 't', baseDuration);
-        if (sustainDuration > 0) {
-            resultParts.push(formatDurationDisplay(sustainDuration));
-        }
+        sustainDuration = parseValueWithReference(sustainStr, 't', parsedDuration);
+    } else {
+        // 如果没有指定延音时长，使用默认延音率计算
+        sustainDuration = calculateSustainDuration(parsedDuration);
     }
+    
+    // 始终添加延音参数，即使为0
+    resultParts.push(formatDurationDisplay(sustainDuration));
     
     return resultParts.join('_');
 }
