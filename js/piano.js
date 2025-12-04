@@ -1671,7 +1671,6 @@ function convertSolfegeToAbsolutePitch(inputText) {
 
     // 存入sessionStorage
     sessionStorage.setItem('convertedAbsoluteSequence', result);
-    sessionStorage.setItem('conversionTimestamp', new Date().toISOString());
 
     // 新增：存储默认音符时值和音符力度到sessionStorage
     try {
