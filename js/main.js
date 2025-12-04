@@ -178,10 +178,10 @@ function setupEventListeners() {
     setupButtonClickHandlers();
 
     // 添加特效点播按钮事件监听
-    // const effectBtn = document.getElementById('effectBtn');
-    // if (effectBtn) {
-    //     effectBtn.addEventListener('click', playEffectSequence);
-    // }
+    const effectBtn = document.getElementById('effectBtn');
+    if (effectBtn) {
+        effectBtn.addEventListener('click', playEffectSequence);
+    }
 
     // 音符数量变化监听
     noteCountInput.addEventListener('change', () => {
@@ -588,6 +588,36 @@ function updateRandomRangeKnobIndicators() {
     const velocityAngle = ((velocityRandomRange - 0.1) / 0.9) * 360;
     document.getElementById('velocityRandomRangeIndicator').style.transform =
         `translateX(-50%) rotate(${velocityAngle}deg)`;
+}
+
+// 特效点播函数
+function playEffectSequence() {
+    const solfegeSequenceInput = document.getElementById('solfegeSequence');
+    const inputText = solfegeSequenceInput.value.trim();
+    
+    if (!inputText) {
+        MessageUtils.showWarning("点播输入框为空，无法转换");
+        return;
+    }
+    
+    try {
+        // 调用转换函数
+        const convertedSequence = convertSolfegeToAbsolutePitch(inputText);
+        
+        // 将转换后的内容显示在控制台
+        console.log("=== 唱名模式转绝对音高朴素模式 ===");
+        console.log("原始输入:", inputText);
+        console.log("转换结果:", convertedSequence);
+        console.log("转换时间:", new Date().toLocaleString());
+        console.log("=== 转换完成 ===");
+        
+        // 显示成功消息
+        MessageUtils.showSuccess("转换完成！结果已存入sessionStorage并在控制台显示");
+        
+    } catch (error) {
+        console.error("转换失败:", error);
+        MessageUtils.showError("转换失败: " + error.message);
+    }
 }
 
 // 初始化应用

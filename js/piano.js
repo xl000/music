@@ -1648,6 +1648,141 @@ function convertSolfegeToAbsolutePitch(inputText) {
     return result;
 }
 
+// 唱名模式转绝对音高朴素模式函数
+function convertSolfegeToAbsolutePitch(inputText) {
+    if (!inputText || inputText.trim() === '') {
+        console.log("输入为空");
+        return "";
+    }
+
+    const solfegeNoteMap = createSolfegeNoteMap();
+    const useDefaultMap = Object.keys(solfegeNoteMap).length === 0;
+    const baseDuration = getNoteDuration();
+    const baseVelocity = getDefaultVelocity();
+
+    // 解析输入文本，支持逗号和中文逗号分隔
+    const items = inputText.split(/[,，]/).map(item => item.trim()).filter(item => item !== '');
+
+    const convertedItems = items.map(item => {
+        // 处理空闲时间（以下划线开头，只有时长参数）
+        if (item.startsWith('_')) {
+            // 解析空闲时间
+            const restParts = item.split('_').filter(part => part !== '');
+            if (restParts.length >= 2) {
+                const durationStr = restParts[1];
+                const duration = parseValueWithReference(durationStr, 't', baseDuration);
+                return `_${formatDurationDisplay(duration)}`;
+            }
+            return item; // 保持原样
+        }
+
+        // 处理和弦（括号内的内容）
+        if ((item.startsWith('(') || item.startsWith('（')) &&
+            (item.endsWith(')') || item.endsWith('）'))) {
+            return convertChordToAbsolute(item, solfegeNoteMap, useDefaultMap, baseDuration, baseVelocity);
+        }
+
+        // 处理单个音符
+        return convertSingleNoteToAbsolute(item, solfegeNoteMap, useDefaultMap, baseDuration, baseVelocity);
+    });
+
+    const result = convertedItems.join(', ');
+    console.log("转换结果:", result);
+    
+    // 存入sessionStorage
+    sessionStorage.setItem('convertedAbsoluteSequence', result);
+    sessionStorage.setItem('conversionTimestamp', new Date().toISOString());
+    
+    return result;
+}
+
+// 转换和弦到绝对音高
+function convertChordToAbsolute(chordStr, solfegeNoteMap, useDefaultMap, baseDuration, baseVelocity) {
+    const inner = chordStr.replace(/[()（）]/g, '');
+    const notes = inner.split(/[，,]/).map(note => note.trim()).filter(note => note !== '');
+    
+    const convertedNotes = notes.map(note => {
+        return convertSingleNoteToAbsolute(note, solfegeNoteMap, useDefaultMap, baseDuration, baseVelocity);
+    });
+    
+    return `(${convertedNotes.join(',')})`;
+}
+
+// 转换单个音符到绝对音高
+function convertSingleNoteToAbsolute(item, solfegeNoteMap, useDefaultMap, baseDuration, baseVelocity) {
+    const parts = item.split('_').filter(part => part !== '');
+    if (parts.length === 0) return item;
+    
+    // 转换唱名部分
+    const solfegePart = parts[0];
+    const absoluteNote = convertSolfegeToNote(solfegePart, solfegeNoteMap, useDefaultMap);
+    
+    if (!absoluteNote) {
+        console.warn(`无法转换唱名: ${solfegePart}`);
+        return item;
+    }
+    
+    const resultParts = [absoluteNote];
+    
+    // 处理时长部分（第二个参数）
+    if (parts.length >= 2) {
+        const durationStr = parts[1];
+        const duration = parseValueWithReference(durationStr, 't', baseDuration);
+        resultParts.push(formatDurationDisplay(duration));
+    } else {
+        resultParts.push(formatDurationDisplay(baseDuration));
+    }
+    
+    // 处理力度部分（第三个参数）
+    if (parts.length >= 3) {
+        const velocityStr = parts[2];
+        const velocity = parseValueWithReference(velocityStr, 'f', baseVelocity);
+        resultParts.push(velocity.toString());
+    } else {
+        resultParts.push(baseVelocity.toString());
+    }
+    
+    // 处理延音部分（第四个参数）- 如果有的话
+    if (parts.length >= 4) {
+        const sustainStr = parts[3];
+        const sustainDuration = parseValueWithReference(sustainStr, 't', baseDuration);
+        if (sustainDuration > 0) {
+            resultParts.push(formatDurationDisplay(sustainDuration));
+        }
+    }
+    
+    return resultParts.join('_');
+}
+
+// 将唱名转换为音符
+function convertSolfegeToNote(solfegeStr, solfegeNoteMap, useDefaultMap) {
+    const { baseSolfege, octaveShift, pitchShift } = parseSolfegeWithModifiers(solfegeStr);
+    
+    if (useDefaultMap) {
+        // 使用默认映射
+        const noteBase = solfegeToNoteMap[baseSolfege.toLowerCase()];
+        if (noteBase) {
+            for (const note of selectedNotes) {
+                if (note.startsWith(noteBase)) {
+                    return applyPitchShift(note, octaveShift, pitchShift);
+                }
+            }
+        }
+    } else {
+        // 使用用户定义的映射
+        const mappedNote = solfegeNoteMap[baseSolfege.toLowerCase()];
+        if (mappedNote) {
+            return applyPitchShift(mappedNote, octaveShift, pitchShift);
+        }
+    }
+    
+    return null;
+}
+
+// 在文件末尾导出函数，确保全局可用
+window.convertSolfegeToAbsolutePitch = convertSolfegeToAbsolutePitch;
+
+
 // 导出函数供其他模块使用
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
