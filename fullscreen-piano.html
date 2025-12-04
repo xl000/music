@@ -264,7 +264,7 @@
                     }
                 } else {
                     // 没有缓存，正常加载
-                    updateLoadProgress(0, "开始加载音源...");
+                    updateLoadProgress(0, "没有缓存，开始从本地加载音源...");
                     loadAudioFromScratch(resolve, reject);
                 }
             });
@@ -395,7 +395,8 @@
             try {
                 await Tone.start();
 
-                const now = startTime || Tone.now();
+                // 修复：使用传入的startTime而不是Tone.now()
+                const now = startTime !== null ? startTime : Tone.now();
                 globalSampler.triggerAttackRelease(noteName, duration, now);
 
                 // 高亮琴键
@@ -573,15 +574,16 @@
                         await Tone.start();
                     }
 
-                    const actualStartTime = startTime || Tone.now() + 0.1;
+                    // 修复：使用传入的startTime而不是Tone.now()
+                    const actualStartTime = startTime !== null ? startTime : Tone.now() + 0.1;
 
                     const playPromises = notes.map(note => {
                         let duration = Math.min(note.duration || 0.8, 2);
                         const velocity = note.velocity || 1;
 
-                        this.createRainEffect(note, duration, note);
+                        this.createRainEffect(note.note || note, duration, note);
 
-                        return this.playPianoNote(note, duration, actualStartTime, velocity);
+                        return this.playPianoNote(note.note || note, duration, actualStartTime, velocity);
                     });
 
                     await Promise.all(playPromises);
@@ -785,10 +787,10 @@
                         if (!this.isPlaying) return;
 
                         if (group.notes.length > 1) {
-                            // 播放和弦
+                            // 播放和弦 - 修复：使用传入的time参数
                             this.playNotesSimultaneously(group.notes, time);
                         } else {
-                            // 播放单音
+                            // 播放单音 - 修复：使用传入的time参数
                             this.playPianoNote(group.notes[0].note || group.notes[0],
                                 group.duration || 0.8, time);
                         }
@@ -800,8 +802,9 @@
                     this.scheduledEvents.push(eventId);
                 });
 
-                const totalDuration = sequence[sequence.length - 1].time +
-                    (sequence[sequence.length - 1].duration || 0.8) + 0.5;
+                const totalDuration = sequence.length > 0 ? 
+                    sequence[sequence.length - 1].time + (sequence[sequence.length - 1].duration || 0.8) + 0.5 : 0;
+                    
                 const endEventId = Tone.Transport.schedule(() => {
                     this.stop();
                 }, totalDuration);
@@ -1110,10 +1113,10 @@
                             if (!this.isPlaying) return;
 
                             if (item.isChord && item.notes) {
-                                // 播放和弦
+                                // 播放和弦 - 修复：使用传入的time参数
                                 this.playNotesSimultaneously(item.notes, time);
                             } else if (item.notes && item.notes.length > 0) {
-                                // 播放单音
+                                // 播放单音 - 修复：使用传入的time参数
                                 const note = item.notes[0];
                                 this.playPianoNote(note.note, note.duration, time, note.velocity);
                             }
@@ -1147,7 +1150,8 @@
                             await Tone.start();
                         }
 
-                        const actualStartTime = startTime || Tone.now() + 0.1;
+                        // 修复：使用传入的startTime而不是Tone.now()
+                        const actualStartTime = startTime !== null ? startTime : Tone.now() + 0.1;
                         const playPromises = notes.map(note => {
                             let duration = Math.min(note.duration || 0.8, 2);
                             const velocity = note.velocity || 1;
