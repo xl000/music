@@ -5,158 +5,119 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>全屏钢琴</title>
+    <!-- CSS文件 -->
+    <link rel="stylesheet" href="css/fullscreen-piano.css">
     <style>
-        /* 全局样式 */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: 'Arial', sans-serif;
-            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
-            color: white;
-            overflow: hidden;
-        }
-        
-        /* 全屏钢琴样式 */
-        .fullscreen-piano {
+        /* 加载页面样式 */
+        #loadingPage {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
             display: flex;
             flex-direction: column;
-            background: rgba(0, 0, 0, 0.7);
-            z-index: 1000;
-        }
-        
-        .fullscreen-piano-header {
-            padding: 15px;
-            background: rgba(0, 0, 0, 0.8);
-            display: flex;
-            justify-content: space-between;
+            justify-content: center;
             align-items: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease;
         }
-        
-        .collapse-btn {
-            background: #ff6b6b;
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-        
-        .collapse-btn:hover {
-            background: #ff5252;
-        }
-        
-        .fullscreen-playback-info {
+
+        .loading-content {
             text-align: center;
-            padding: 10px;
-            font-size: 18px;
-            background: rgba(0, 0, 0, 0.5);
-        }
-        
-        .fullscreen-piano-content {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-        
-        .fullscreen-piano-container {
-            flex: 1;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            overflow: hidden;
-        }
-        
-        .fullscreen-piano-keyboard-container {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: flex-end;
-            padding-bottom: 20px;
-        }
-        
-        .fullscreen-piano-keyboard {
-            display: flex;
-            position: relative;
-            height: 200px;
-            max-width: 95%;
-        }
-        
-        /* 钢琴键样式 */
-        .key {
-            position: relative;
-            cursor: pointer;
-            display: flex;
-            justify-content: center;
-            align-items: flex-end;
-            padding-bottom: 10px;
-            user-select: none;
-        }
-        
-        .white {
-            background: white;
-            border: 1px solid #ccc;
-            border-radius: 0 0 5px 5px;
-            width: 40px;
-            height: 100%;
-            z-index: 1;
-            color: #333;
-        }
-        
-        .black {
-            background: #333;
-            border: 1px solid #000;
-            border-radius: 0 0 3px 3px;
-            width: 24px;
-            height: 60%;
-            margin-left: -12px;
-            margin-right: -12px;
-            z-index: 2;
             color: white;
+            max-width: 600px;
+            padding: 20px;
         }
-        
-        .key-label {
-            font-size: 12px;
-            font-weight: bold;
+
+        .loading-title {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
         }
-        
-        .key.playing {
-            background: #4facfe;
+
+        .loading-subtitle {
+            font-size: 1.2rem;
+            margin-bottom: 30px;
+            opacity: 0.9;
         }
-        
-        .white.playing {
-            background: #4facfe;
+
+        .progress-container {
+            width: 80%;
+            max-width: 400px;
+            background-color: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            margin: 20px 0;
+            overflow: hidden;
         }
-        
-        .black.playing {
-            background: #1a73e8;
+
+        .progress-bar {
+            height: 20px;
+            background: linear-gradient(90deg, #4facfe, #00f2fe);
+            width: 0%;
+            border-radius: 10px;
+            transition: width 0.3s ease;
         }
-        
-        /* 钢琴雨效果样式 */
-        .piano-rain-container {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 5;
+
+        .progress-text {
+            font-size: 1.1rem;
+            margin-top: 10px;
+        }
+
+        .loading-details {
+            font-size: 0.9rem;
+            margin-top: 10px;
+            opacity: 0.8;
+        }
+
+        .loading-icon {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.7; }
+            50% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); opacity: 0.7; }
+        }
+
+        /* 隐藏主内容直到加载完成 */
+        .container, #fullscreenPiano {
+            display: none;
         }
     </style>
 </head>
 
 <body>
+    <!-- 音源加载页面 -->
+    <div id="loadingPage">
+        <div class="loading-content">
+            <div class="loading-icon">🎹</div>
+            <h1 class="loading-title">全屏钢琴</h1>
+            <p class="loading-subtitle">正在加载钢琴音源，请稍候...</p>
+            
+            <div class="progress-container">
+                <div id="globalProgressBar" class="progress-bar"></div>
+            </div>
+            
+            <div id="progressText" class="progress-text">0%</div>
+            <div id="loadingDetails" class="loading-details">初始化中...</div>
+        </div>
+    </div>
+
+    <!-- 主页面内容 -->
+    <div class="container">
+        <h1>全屏钢琴 - 特效点播</h1>
+        <div class="description" id="conversionInfo">
+            准备播放转换后的序列...
+        </div>
+        <div class="footer">
+            全屏钢琴 | 基于 pure-piano.js
+        </div>
+    </div>
+
     <!-- 全屏钢琴容器 -->
     <div id="fullscreenPiano" class="fullscreen-piano">
         <div class="fullscreen-piano-header">
@@ -164,7 +125,7 @@
         </div>
         <div class="fullscreen-piano-content">
             <div class="fullscreen-playback-info" id="fullscreenPlaybackInfo">
-                加载中...
+                准备播放...
             </div>
             <div class="fullscreen-piano-container">
                 <div class="fullscreen-piano-keyboard-container">
@@ -175,7 +136,7 @@
     </div>
 
     <!-- 引入Tone.js库 -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <script src="js/Tone.js"></script>
     <script>
         // 音源文件映射
         const soundFiles = {
@@ -197,9 +158,11 @@
             "C8": "C8.mp3"
         };
 
-        // 全局变量
+        // 加载进度控制
+        let loadProgress = 0;
+        let isAudioLoaded = false;
         let globalSampler = null;
-        let isAudioContextStarted = false;
+        let isAudioContextStarted = false; // 新增：标记音频上下文是否已启动
 
         // 启动音频上下文的函数
         async function startAudioContext() {
@@ -212,6 +175,155 @@
             } catch (error) {
                 console.error("Failed to start AudioContext:", error);
             }
+        }
+
+        // 更新加载进度
+        function updateLoadProgress(percent, message) {
+            loadProgress = Math.min(100, Math.max(0, percent));
+            
+            const progressBar = document.getElementById('globalProgressBar');
+            const progressText = document.getElementById('progressText');
+            const loadingDetails = document.getElementById('loadingDetails');
+            
+            if (progressBar) {
+                progressBar.style.width = loadProgress + '%';
+            }
+            if (progressText) {
+                progressText.textContent = Math.round(loadProgress) + '%';
+            }
+            if (loadingDetails) {
+                loadingDetails.textContent = message;
+            }
+        }
+
+        // 模拟加载进度（用于正常加载时）
+        function simulateLoadProgress() {
+            let progress = 0;
+            const interval = setInterval(() => {
+                if (isAudioLoaded) {
+                    clearInterval(interval);
+                    return;
+                }
+                
+                progress += Math.random() * 5;
+                if (progress < 90) {
+                    updateLoadProgress(progress, `正在加载音源文件... (${Math.round(progress)}%)`);
+                } else if (progress < 99) {
+                    updateLoadProgress(progress, "即将完成...");
+                }
+            }, 200);
+        }
+
+        // 隐藏加载界面
+        function hideLoadingPage() {
+            const loadingPage = document.getElementById('loadingPage');
+            if (loadingPage) {
+                // 添加淡出效果
+                loadingPage.style.opacity = '0';
+                loadingPage.style.transition = 'opacity 0.5s ease';
+                
+                setTimeout(() => {
+                    loadingPage.style.display = 'none';
+                    // 直接显示全屏钢琴界面
+                    document.getElementById('fullscreenPiano').style.display = 'block';
+                }, 500);
+            }
+        }
+
+        // 初始化音源加载 - 优先使用sessionStorage缓存
+        function initAudioLoad() {
+            return new Promise((resolve, reject) => {
+                // 先检查sessionStorage中是否有缓存的音源数据
+                const cachedAudioData = sessionStorage.getItem('pianoAudioData');
+                const cachedLoadTime = sessionStorage.getItem('pianoAudioLoadTime');
+                
+                // 如果缓存存在且是最近加载的（比如1小时内），直接使用缓存
+                if (cachedAudioData && cachedLoadTime && (Date.now() - parseInt(cachedLoadTime)) < 3600000) {
+                    try {
+                        console.log("从sessionStorage加载缓存的音源数据");
+                        updateLoadProgress(50, "从缓存加载音源配置...");
+                        
+                        const audioData = JSON.parse(cachedAudioData);
+                        
+                        const sampler = new Tone.Sampler({
+                            urls: audioData.soundFiles,
+                            baseUrl: audioData.baseUrl,
+                            onload: () => {
+                                console.log("从缓存加载音源完成");
+                                updateLoadProgress(100, "音源加载完成！");
+                                isAudioLoaded = true;
+                                globalSampler = sampler;
+                                
+                                // 延迟隐藏加载界面，让用户看到完成信息
+                                setTimeout(() => {
+                                    hideLoadingPage();
+                                    resolve(sampler);
+                                }, 500);
+                            },
+                            onerror: (error) => {
+                                console.error("缓存音源加载失败，重新加载:", error);
+                                updateLoadProgress(0, "缓存加载失败，重新加载...");
+                                // 缓存加载失败，使用正常加载流程
+                                loadAudioFromScratch(resolve, reject);
+                            }
+                        }).toDestination();
+                        
+                        return;
+                    } catch (error) {
+                        console.error("缓存解析失败，重新加载音源:", error);
+                        updateLoadProgress(0, "缓存解析失败，重新加载...");
+                        // 如果缓存解析失败，继续正常加载流程
+                        loadAudioFromScratch(resolve, reject);
+                    }
+                } else {
+                    // 没有缓存，正常加载
+                    updateLoadProgress(0, "没有缓存，开始从本地加载音源...");
+                    loadAudioFromScratch(resolve, reject);
+                }
+            });
+        }
+
+        // 正常加载音源的函数
+        function loadAudioFromScratch(resolve, reject) {
+            console.log("开始加载音源...");
+            
+            // 开始模拟加载进度
+            simulateLoadProgress();
+            
+            const sampler = new Tone.Sampler({
+                urls: soundFiles,
+                baseUrl: "./sounds/",
+                onload: () => {
+                    console.log("本地钢琴音源加载完成");
+                    updateLoadProgress(100, "音源加载完成！");
+                    isAudioLoaded = true;
+                    globalSampler = sampler;
+                    
+                    // 将音源数据存储到sessionStorage供下次使用
+                    try {
+                        const audioData = {
+                            soundFiles: soundFiles,
+                            baseUrl: "./sounds/",
+                            loadTime: Date.now()
+                        };
+                        sessionStorage.setItem('pianoAudioData', JSON.stringify(audioData));
+                        sessionStorage.setItem('pianoAudioLoadTime', Date.now().toString());
+                        console.log("音源数据已存储到sessionStorage");
+                    } catch (error) {
+                        console.warn("sessionStorage存储失败:", error);
+                    }
+                    
+                    // 延迟隐藏加载界面，让用户看到完成信息
+                    setTimeout(() => {
+                        hideLoadingPage();
+                        resolve(sampler);
+                    }, 500);
+                },
+                onerror: (error) => {
+                    console.error("音源加载错误:", error);
+                    updateLoadProgress(0, `加载错误: ${error.message}`);
+                }
+            }).toDestination();
         }
 
         // pure-piano.js 简化版
@@ -255,10 +367,10 @@
                     label.textContent = fullNote;
                     key.appendChild(label);
 
-                    // 点击琴键事件
+                    // 点击琴键事件 - 修复：添加音频上下文启动
                     key.addEventListener('click', async () => {
                         try {
-                            await startAudioContext();
+                            await startAudioContext(); // 确保音频上下文已启动
 
                             key.classList.add('playing');
                             setTimeout(() => key.classList.remove('playing'), 300);
@@ -268,11 +380,11 @@
                         }
                     });
 
-                    // 触摸事件支持
+                    // 触摸事件支持 - 修复：添加音频上下文启动
                     key.addEventListener('touchstart', async (e) => {
                         e.preventDefault();
                         try {
-                            await startAudioContext();
+                            await startAudioContext(); // 确保音频上下文已启动
 
                             key.classList.add('playing');
                             setTimeout(() => key.classList.remove('playing'), 300);
@@ -290,8 +402,9 @@
         // 播放钢琴音符
         async function playNote(noteName, duration = 0.8, startTime = null) {
             try {
-                await startAudioContext();
+                await startAudioContext(); // 确保音频上下文已启动
 
+                // 修复：使用传入的startTime而不是Tone.now()
                 const now = startTime !== null ? startTime : Tone.now();
                 globalSampler.triggerAttackRelease(noteName, duration, now);
 
@@ -318,7 +431,7 @@
                 this.scheduledEvents = [];
                 this.pausedTime = 0;
                 this.isPaused = false;
-                this.isFullscreen = true; // 默认全屏显示
+                this.isFullscreen = true; // 修改：默认设置为全屏模式
                 this.rainContainer = null;
                 this.activeRainElements = [];
                 this.noteBaseDuration = 1;
@@ -354,7 +467,6 @@
 
                 this.initPiano();
                 this.createRainContainer();
-                this.adjustPianoSize();
             }
 
             setupEventListeners() {
@@ -363,7 +475,9 @@
 
                 // 窗口大小改变时重新调整钢琴大小
                 window.addEventListener('resize', () => {
-                    setTimeout(() => this.adjustPianoSize(), 100);
+                    if (this.isFullscreen) {
+                        setTimeout(() => this.adjustPianoSize(), 100);
+                    }
                 });
             }
 
@@ -377,15 +491,27 @@
                 createPiano(this.fullscreenPianoKeyboard);
             }
 
+            showFullscreenPiano() {
+                this.isFullscreen = true;
+
+                document.body.classList.add('fullscreen-mode');
+                this.fullscreenPiano.classList.add('active');
+
+                setTimeout(() => {
+                    this.adjustPianoSize();
+                }, 100);
+            }
+
             collapseFullscreen() {
                 this.isFullscreen = false;
                 document.body.classList.remove('fullscreen-mode');
                 this.fullscreenPiano.classList.remove('active');
                 this.stop();
-                window.close();
             }
 
             adjustPianoSize() {
+                if (!this.isFullscreen) return;
+
                 const keyboard = this.fullscreenPianoKeyboard;
                 const container = keyboard.parentElement;
                 const containerWidth = container.clientWidth;
@@ -450,8 +576,9 @@
                 if (!notes || notes.length === 0) return;
 
                 try {
-                    await startAudioContext();
+                    await startAudioContext(); // 确保音频上下文已启动
 
+                    // 修复：使用传入的startTime而不是Tone.now()
                     const actualStartTime = startTime !== null ? startTime : Tone.now() + 0.1;
 
                     const playPromises = notes.map(note => {
@@ -618,10 +745,10 @@
                 });
             }
 
-            // 播放序列
+            // 播放序列（供外部调用）
             async playSequence(sequence, title = "自定义序列") {
                 try {
-                    await startAudioContext();
+                    await startAudioContext(); // 确保音频上下文已启动
                     
                     this.startPlayback(sequence, title);
                 } catch (error) {
@@ -663,8 +790,10 @@
                         if (!this.isPlaying) return;
 
                         if (group.notes.length > 1) {
+                            // 播放和弦 - 修复：使用传入的time参数
                             this.playNotesSimultaneously(group.notes, time);
                         } else {
+                            // 播放单音 - 修复：使用传入的time参数
                             this.playPianoNote(group.notes[0].note || group.notes[0],
                                 group.duration || 0.8, time);
                         }
@@ -789,221 +918,6 @@
             }
         }
 
-        // 初始化音源加载
-        function initAudioLoad() {
-            return new Promise((resolve, reject) => {
-                // 先检查sessionStorage中是否有缓存的音源数据
-                const cachedAudioData = sessionStorage.getItem('pianoAudioData');
-                const cachedLoadTime = sessionStorage.getItem('pianoAudioLoadTime');
-                
-                // 如果缓存存在且是最近加载的（比如1小时内），直接使用缓存
-                if (cachedAudioData && cachedLoadTime && (Date.now() - parseInt(cachedLoadTime)) < 3600000) {
-                    try {
-                        console.log("从sessionStorage加载缓存的音源数据");
-                        
-                        const audioData = JSON.parse(cachedAudioData);
-                        
-                        const sampler = new Tone.Sampler({
-                            urls: audioData.soundFiles,
-                            baseUrl: audioData.baseUrl,
-                            onload: () => {
-                                console.log("从缓存加载音源完成");
-                                globalSampler = sampler;
-                                resolve(sampler);
-                            },
-                            onerror: (error) => {
-                                console.error("缓存音源加载失败，重新加载:", error);
-                                // 缓存加载失败，使用正常加载流程
-                                loadAudioFromScratch(resolve, reject);
-                            }
-                        }).toDestination();
-                        
-                        return;
-                    } catch (error) {
-                        console.error("缓存解析失败，重新加载音源:", error);
-                        // 如果缓存解析失败，继续正常加载流程
-                        loadAudioFromScratch(resolve, reject);
-                    }
-                } else {
-                    // 没有缓存，正常加载
-                    loadAudioFromScratch(resolve, reject);
-                }
-            });
-        }
-
-        // 正常加载音源的函数
-        function loadAudioFromScratch(resolve, reject) {
-            console.log("开始加载音源...");
-            
-            const sampler = new Tone.Sampler({
-                urls: soundFiles,
-                baseUrl: "./sounds/",
-                onload: () => {
-                    console.log("本地钢琴音源加载完成");
-                    globalSampler = sampler;
-                    
-                    // 将音源数据存储到sessionStorage供下次使用
-                    try {
-                        const audioData = {
-                            soundFiles: soundFiles,
-                            baseUrl: "./sounds/",
-                            loadTime: Date.now()
-                        };
-                        sessionStorage.setItem('pianoAudioData', JSON.stringify(audioData));
-                        sessionStorage.setItem('pianoAudioLoadTime', Date.now().toString());
-                        console.log("音源数据已存储到sessionStorage");
-                    } catch (error) {
-                        console.warn("sessionStorage存储失败:", error);
-                    }
-                    
-                    resolve(sampler);
-                },
-                onerror: (error) => {
-                    console.error("音源加载错误:", error);
-                    reject(error);
-                }
-            }).toDestination();
-        }
-
-        // 检查并播放转换后的序列
-        function checkAndPlayConvertedSequence() {
-            const convertedSequence = sessionStorage.getItem('convertedAbsoluteSequence');
-            const defaultNoteDuration = sessionStorage.getItem('defaultNoteDuration');
-            const defaultNoteVelocity = sessionStorage.getItem('defaultNoteVelocity');
-
-            if (convertedSequence) {
-                // 设置默认参数
-                if (defaultNoteDuration) {
-                    window.pianoPlayer.noteBaseDuration = parseFloat(defaultNoteDuration);
-                }
-                if (defaultNoteVelocity) {
-                    window.pianoPlayer.noteBaseVelocity = parseFloat(defaultNoteVelocity);
-                }
-
-                // 解析并播放序列
-                const parsedSequence = parseConvertedSequence(convertedSequence);
-                if (parsedSequence && parsedSequence.length > 0) {
-                    // 延迟一下确保钢琴界面完全加载
-                    setTimeout(() => {
-                        window.pianoPlayer.playSequence(parsedSequence, "特效点播序列");
-                        // 播放完成后清理sessionStorage
-                        sessionStorage.removeItem('convertedAbsoluteSequence');
-                        sessionStorage.removeItem('defaultNoteDuration');
-                        sessionStorage.removeItem('defaultNoteVelocity');
-                    }, 1000);
-                }
-            } else {
-                window.pianoPlayer.fullscreenPlaybackInfo.textContent = "全屏钢琴已就绪，可以开始弹奏";
-            }
-        }
-
-        // 解析转换后的序列
-        function parseConvertedSequence(sequenceStr) {
-            try {
-                const items = sequenceStr.split(',').map(item => item.trim()).filter(item => item);
-                const sequence = [];
-                let currentTime = 0;
-
-                items.forEach((item, index) => {
-                    // 处理休止符（以下划线开头）
-                    if (item.startsWith('_')) {
-                        const restParts = item.substring(1).split('_').filter(part => part);
-                        let restDuration = window.pianoPlayer.noteBaseDuration;
-                        let restSustain = 0;
-
-                        if (restParts.length >= 1) {
-                            restDuration = parseFloat(restParts[0]) || restDuration;
-                        }
-                        if (restParts.length >= 2) {
-                            restSustain = parseFloat(restParts[1]) || 0;
-                        }
-
-                        // 休止符：增加时间但不添加音符
-                        currentTime += restDuration;
-                        return;
-                    }
-
-                    // 处理和弦（括号内的内容）
-                    if (item.startsWith('(') && item.endsWith(')')) {
-                        const chordContent = item.substring(1, item.length - 1);
-                        const chordNotes = chordContent.split(',').map(note => note.trim()).filter(note => note);
-                        const chordSequence = [];
-
-                        chordNotes.forEach(chordNote => {
-                            const noteData = parseSingleNote(chordNote, currentTime);
-                            if (noteData) {
-                                chordSequence.push(noteData);
-                            }
-                        });
-
-                        if (chordSequence.length > 0) {
-                            // 取最长的持续时间作为和弦的持续时间
-                            const maxDuration = Math.max(...chordSequence.map(note => note.duration));
-                            sequence.push({
-                                time: currentTime,
-                                notes: chordSequence,
-                                duration: maxDuration,
-                                isChord: true
-                            });
-                            currentTime += maxDuration;
-                        }
-                        return;
-                    }
-
-                    // 处理单个音符
-                    const noteData = parseSingleNote(item, currentTime);
-                    if (noteData) {
-                        sequence.push({
-                            time: currentTime,
-                            notes: [noteData],
-                            duration: noteData.duration,
-                            isChord: false
-                        });
-                        currentTime += noteData.duration;
-                    }
-                });
-
-                return sequence;
-            } catch (error) {
-                console.error("解析序列错误:", error);
-                return null;
-            }
-        }
-
-        // 解析单个音符
-        function parseSingleNote(noteStr, startTime) {
-            const parts = noteStr.split('_').filter(part => part);
-            if (parts.length === 0) return null;
-
-            const noteName = parts[0];
-            let duration = window.pianoPlayer.noteBaseDuration;
-            let velocity = window.pianoPlayer.noteBaseVelocity;
-            let sustain = 0;
-
-            // 解析时长
-            if (parts.length >= 2) {
-                duration = parseFloat(parts[1]) || duration;
-            }
-
-            // 解析力度
-            if (parts.length >= 3) {
-                velocity = parseFloat(parts[2]) || velocity;
-            }
-
-            // 解析延音
-            if (parts.length >= 4) {
-                sustain = parseFloat(parts[3]) || 0;
-            }
-
-            return {
-                note: noteName,
-                duration: duration,
-                velocity: velocity,
-                sustain: sustain,
-                time: startTime
-            };
-        }
-
         // 初始化应用
         document.addEventListener('DOMContentLoaded', function () {
             // 先加载音源
@@ -1011,6 +925,249 @@
                 // 音源加载完成后初始化钢琴播放器
                 window.pianoPlayer = new PianoPlayer(sampler);
                 
+                // 自动显示全屏钢琴界面
+                window.pianoPlayer.showFullscreenPiano();
+                
+                // 检查是否有从ear.html传递的转换序列
+                function checkAndPlayConvertedSequence() {
+                    const convertedSequence = sessionStorage.getItem('convertedAbsoluteSequence');
+                    const defaultNoteDuration = sessionStorage.getItem('defaultNoteDuration');
+                    const defaultNoteVelocity = sessionStorage.getItem('defaultNoteVelocity');
+                    const infoElement = document.getElementById('conversionInfo');
+
+                    if (convertedSequence) {
+                        if (infoElement) {
+                            infoElement.innerHTML = `检测到转换序列<br>正在准备播放...`;
+                        }
+
+                        // 设置默认参数
+                        if (defaultNoteDuration) {
+                            window.pianoPlayer.noteBaseDuration = parseFloat(defaultNoteDuration);
+                        }
+                        if (defaultNoteVelocity) {
+                            window.pianoPlayer.noteBaseVelocity = parseFloat(defaultNoteVelocity);
+                        }
+
+                        // 解析并播放序列
+                        const parsedSequence = parseConvertedSequence(convertedSequence);
+                        if (parsedSequence && parsedSequence.length > 0) {
+                            // 延迟一下确保钢琴界面完全加载
+                            setTimeout(() => {
+                                window.pianoPlayer.playSequence(parsedSequence, "特效点播序列");
+                                // 播放完成后清理sessionStorage
+                                sessionStorage.removeItem('convertedAbsoluteSequence');
+                                sessionStorage.removeItem('defaultNoteDuration');
+                                sessionStorage.removeItem('defaultNoteVelocity');
+                            }, 1000);
+                        }
+                    } else {
+                        if (infoElement) {
+                            infoElement.innerHTML = "这是一个独立的全屏钢琴页面，包含钢琴雨效果，可以手动弹奏或通过API调用播放功能。";
+                        }
+                    }
+                }
+
+                // 解析转换后的序列
+                function parseConvertedSequence(sequenceStr) {
+                    try {
+                        const items = sequenceStr.split(',').map(item => item.trim()).filter(item => item);
+                        const sequence = [];
+                        let currentTime = 0;
+
+                        items.forEach((item, index) => {
+                            // 处理休止符（以下划线开头）
+                            if (item.startsWith('_')) {
+                                const restParts = item.substring(1).split('_').filter(part => part);
+                                let restDuration = window.pianoPlayer.noteBaseDuration;
+                                let restSustain = 0;
+
+                                if (restParts.length >= 1) {
+                                    restDuration = parseFloat(restParts[0]) || restDuration;
+                                }
+                                if (restParts.length >= 2) {
+                                    restSustain = parseFloat(restParts[1]) || 0;
+                                }
+
+                                // 休止符：增加时间但不添加音符
+                                currentTime += restDuration;
+                                return;
+                            }
+
+                            // 处理和弦（括号内的内容）
+                            if (item.startsWith('(') && item.endsWith(')')) {
+                                const chordContent = item.substring(1, item.length - 1);
+                                const chordNotes = chordContent.split(',').map(note => note.trim()).filter(note => note);
+                                const chordSequence = [];
+
+                                chordNotes.forEach(chordNote => {
+                                    const noteData = parseSingleNote(chordNote, currentTime);
+                                    if (noteData) {
+                                        chordSequence.push(noteData);
+                                    }
+                                });
+
+                                if (chordSequence.length > 0) {
+                                    // 取最长的持续时间作为和弦的持续时间
+                                    const maxDuration = Math.max(...chordSequence.map(note => note.duration));
+                                    sequence.push({
+                                        time: currentTime,
+                                        notes: chordSequence,
+                                        duration: maxDuration,
+                                        isChord: true
+                                    });
+                                    currentTime += maxDuration;
+                                }
+                                return;
+                            }
+
+                            // 处理单个音符
+                            const noteData = parseSingleNote(item, currentTime);
+                            if (noteData) {
+                                sequence.push({
+                                    time: currentTime,
+                                    notes: [noteData],
+                                    duration: noteData.duration,
+                                    isChord: false
+                                });
+                                currentTime += noteData.duration;
+                            }
+                        });
+
+                        return sequence;
+                    } catch (error) {
+                        console.error("解析序列错误:", error);
+                        return null;
+                    }
+                }
+
+                // 解析单个音符
+                function parseSingleNote(noteStr, startTime) {
+                    const parts = noteStr.split('_').filter(part => part);
+                    if (parts.length === 0) return null;
+
+                    const noteName = parts[0];
+                    let duration = window.pianoPlayer.noteBaseDuration;
+                    let velocity = window.pianoPlayer.noteBaseVelocity;
+                    let sustain = 0;
+
+                    // 解析时长
+                    if (parts.length >= 2) {
+                        duration = parseFloat(parts[1]) || duration;
+                    }
+
+                    // 解析力度
+                    if (parts.length >= 3) {
+                        velocity = parseFloat(parts[2]) || velocity;
+                    }
+
+                    // 解析延音
+                    if (parts.length >= 4) {
+                        sustain = parseFloat(parts[3]) || 0;
+                    }
+
+                    return {
+                        note: noteName,
+                        duration: duration,
+                        velocity: velocity,
+                        sustain: sustain,
+                        time: startTime
+                    };
+                }
+
+                // 修改PianoPlayer类的playSequence方法，支持新的序列格式
+                PianoPlayer.prototype.playSequence = async function (sequence, title = "自定义序列") {
+                    try {
+                        await startAudioContext(); // 确保音频上下文已启动
+                        this.startPlayback(sequence, title);
+                    } catch (error) {
+                        console.error("启动音频上下文失败:", error);
+                    }
+                };
+
+                // 修改startPlayback方法以支持新的序列格式
+                PianoPlayer.prototype.startPlayback = function (sequence, title) {
+                    if (this.isPlaying && !this.isPaused) return;
+
+                    if (this.isPaused) {
+                        this.resumePlayback();
+                        return;
+                    }
+
+                    this.isPlaying = true;
+                    this.isPaused = false;
+                    this.currentTimeIndex = 0;
+                    this.pausedTime = 0;
+
+                    if (this.playbackSchedule) {
+                        this.playbackSchedule.stop();
+                        this.playbackSchedule = null;
+                    }
+
+                    if (this.scheduledEvents.length) {
+                        this.scheduledEvents.forEach(id => Tone.Transport.clear(id));
+                        this.scheduledEvents = [];
+                    }
+
+                    this.clearRainEffects();
+                    this.clearKeyboardHighlights();
+
+                    // 安排播放事件
+                    sequence.forEach((item, index) => {
+                        const eventId = Tone.Transport.schedule((time) => {
+                            if (!this.isPlaying) return;
+
+                            if (item.isChord && item.notes) {
+                                // 播放和弦 - 修复：使用传入的time参数
+                                this.playNotesSimultaneously(item.notes, time);
+                            } else if (item.notes && item.notes.length > 0) {
+                                // 播放单音 - 修复：使用传入的time参数
+                                const note = item.notes[0];
+                                this.playPianoNote(note.note, note.duration, time, note.velocity);
+                            }
+
+                            this.currentTimeIndex = index;
+                            this.updatePlaybackInfo(index, sequence.length, title);
+
+                        }, item.time);
+                        this.scheduledEvents.push(eventId);
+                    });
+
+                    const totalDuration = sequence.length > 0 ?
+                        sequence[sequence.length - 1].time + sequence[sequence.length - 1].duration + 0.5 : 0;
+
+                    const endEventId = Tone.Transport.schedule(() => {
+                        this.stop();
+                    }, totalDuration);
+                    this.scheduledEvents.push(endEventId);
+
+                    Tone.Transport.start();
+                    this.playbackStartTime = Tone.now();
+                    this.updatePlaybackInfo(0, sequence.length, title);
+                };
+
+                // 修改playNotesSimultaneously方法以支持新的音符格式
+                PianoPlayer.prototype.playNotesSimultaneously = async function (notes, startTime = null) {
+                    if (!notes || notes.length === 0) return;
+
+                    try {
+                        await startAudioContext(); // 确保音频上下文已启动
+
+                        // 修复：使用传入的startTime而不是Tone.now()
+                        const actualStartTime = startTime !== null ? startTime : Tone.now() + 0.1;
+                        const playPromises = notes.map(note => {
+                            let duration = Math.min(note.duration || 0.8, 2);
+                            const velocity = note.velocity || 1;
+
+                            this.createRainEffect(note.note, duration, note);
+                            return this.playPianoNote(note.note, duration, actualStartTime, velocity);
+                        });
+
+                        await Promise.all(playPromises);
+                    } catch (error) {
+                        console.error("播放和弦错误:", error);
+                    }
+                };
+
                 // 页面加载完成后检查并播放序列
                 setTimeout(() => {
                     checkAndPlayConvertedSequence();
@@ -1018,8 +1175,11 @@
 
             }).catch((error) => {
                 console.error("音源加载失败:", error);
-                document.getElementById('fullscreenPlaybackInfo').textContent = 
-                    "音源加载失败，请刷新页面重试。";
+                // 即使音源加载失败，也显示主界面
+                hideLoadingPage();
+                document.querySelector('.container').style.display = 'block';
+                document.getElementById('conversionInfo').innerHTML = 
+                    "音源加载失败，钢琴功能可能无法正常使用。请刷新页面重试。";
             });
         });
     </script>
