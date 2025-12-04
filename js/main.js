@@ -594,16 +594,16 @@ function updateRandomRangeKnobIndicators() {
 function playEffectSequence() {
     const solfegeSequenceInput = document.getElementById('solfegeSequence');
     const inputText = solfegeSequenceInput.value.trim();
-    
+
     if (!inputText) {
         MessageUtils.showWarning("点播输入框为空，无法转换");
         return;
     }
-    
+
     try {
         // 调用转换函数
         const convertedSequence = convertSolfegeToAbsolutePitch(inputText);
-        
+
         // 将转换后的内容显示在控制台
         console.log("=== 唱名模式转绝对音高朴素模式 ===");
         console.log("原始输入:", inputText);
@@ -611,10 +611,10 @@ function playEffectSequence() {
         console.log("当前延音率:", Math.round(getSustainRate() * 100) + "%");
         console.log("转换时间:", new Date().toLocaleString());
         console.log("=== 转换完成 ===");
-        
+
         // 显示成功消息
         MessageUtils.showSuccess("转换完成！结果已存入sessionStorage并在控制台显示");
-        
+
     } catch (error) {
         console.error("转换失败:", error);
         MessageUtils.showError("转换失败: " + error.message);
