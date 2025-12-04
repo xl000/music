@@ -602,7 +602,7 @@ function playEffectSequence() {
     
     try {
         // 调用转换函数
-        const convertedSequence = convertSolfegeToAbsolutePitch(inputText);
+        const convertedSequence = window.convertSolfegeToAbsolutePitch(inputText);
         
         // 将转换后的内容显示在控制台
         console.log("=== 唱名模式转绝对音高朴素模式 ===");
