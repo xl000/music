@@ -613,7 +613,12 @@ function playEffectSequence() {
         console.log("=== 转换完成 ===");
 
         // 显示成功消息
-        MessageUtils.showSuccess("转换完成！结果已存入sessionStorage并在控制台显示");
+        MessageUtils.showSuccess("转换完成！正在跳转到全屏钢琴...");
+
+        // 延迟一下让用户看到成功消息，然后跳转
+        setTimeout(() => {
+            window.location.href = 'fullscreen-piano.html';
+        }, 1000);
 
     } catch (error) {
         console.error("转换失败:", error);
