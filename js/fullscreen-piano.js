@@ -214,66 +214,50 @@ function createPiano(pianoElement, pianoPlayer) {
             const key = document.createElement('div');
             key.className = `key ${isBlack ? 'black' : 'white'}`;
             key.dataset.note = fullNote;
-            key.dataset.pressing = "false"; // 标记按键状态
 
             const label = document.createElement('div');
             label.className = 'key-label';
             label.textContent = fullNote;
             key.appendChild(label);
 
-            // 键盘事件处理函数
-            const handleKeyDown = async (e) => {
+            // 琴键按下事件处理函数
+            const handlePressStart = async (e) => {
                 e.preventDefault();
-                if (key.dataset.pressing === "true") return; // 防止重复触发
-                
                 try {
                     await startAudioContext();
-                    key.dataset.pressing = "true";
                     
-                    // 记录按下时间
-                    const pressStartTime = Date.now();
-                    key.dataset.pressStartTime = pressStartTime;
+                    // 开始持续发声
+                    pianoPlayer.startSustainedNote(fullNote, 1);
                     
-                    // 开始播放音符
-                    pianoPlayer.startPlayingNote(fullNote, pressStartTime);
+                    // 开始生成钢琴雨
+                    pianoPlayer.startRainForNote(fullNote);
                 } catch (error) {
                     console.error("播放错误:", error);
                 }
             };
 
-            const handleKeyUp = async (e) => {
-                e.preventDefault();
-                if (key.dataset.pressing !== "true") return;
-                
+            // 琴键释放事件处理函数
+            const handlePressEnd = (e) => {
                 try {
-                    await startAudioContext();
-                    key.dataset.pressing = "false";
+                    // 停止持续发声
+                    pianoPlayer.stopSustainedNote(fullNote);
                     
-                    const pressStartTime = parseInt(key.dataset.pressStartTime) || Date.now();
-                    const pressDuration = (Date.now() - pressStartTime) / 1000; // 秒
-                    
-                    // 停止播放音符
-                    pianoPlayer.stopPlayingNote(fullNote, pressDuration);
-                    
-                    // 移除高亮
-                    setTimeout(() => {
-                        key.classList.remove('playing');
-                    }, 50);
+                    // 停止生成钢琴雨
+                    pianoPlayer.stopRainForNote(fullNote);
                 } catch (error) {
-                    console.error("播放错误:", error);
+                    console.error("停止音符错误:", error);
                 }
             };
 
-            // 鼠标事件
-            key.addEventListener('mousedown', handleKeyDown);
-            key.addEventListener('mouseup', handleKeyUp);
-            key.addEventListener('mouseleave', handleKeyUp);
+            // 鼠标按下事件
+            key.addEventListener('mousedown', handlePressStart);
+            key.addEventListener('touchstart', handlePressStart);
             
-            // 触摸事件支持
-            key.addEventListener('touchstart', handleKeyDown);
-            key.addEventListener('touchend', handleKeyUp);
-            key.addEventListener('touchcancel', handleKeyUp);
-
+            // 鼠标释放事件
+            key.addEventListener('mouseup', handlePressEnd);
+            key.addEventListener('touchend', handlePressEnd);
+            key.addEventListener('mouseleave', handlePressEnd);
+            
             pianoElement.appendChild(key);
         }
     }
@@ -313,10 +297,10 @@ class PianoPlayer {
         this.isPaused = false;
         this.isFullscreen = true;
         this.rainContainer = null;
-        this.activeRainElements = new Map(); // 使用Map存储雨滴
+        this.activeRainElements = [];
         this.noteBaseDuration = 1;
         this.noteBaseVelocity = 1;
-        this.rainDefaultSpeed = 100; // 像素/秒
+        this.rainDefaultSpeed = 3;
         this.sampler = sampler;
         
         // 播放序列存储
@@ -340,6 +324,10 @@ class PianoPlayer {
             'A#4': 'hsl(300, 80%, 60%)',
             'B4': 'hsl(330, 80%, 60%)'
         };
+        
+        // 持续按下的音符和对应的雨滴生成器
+        this.sustainedNotes = new Map();
+        this.rainGenerators = new Map();
 
         this.initUI();
         this.setupEventListeners();
@@ -355,7 +343,7 @@ class PianoPlayer {
     setupEventListeners() {
         window.addEventListener('resize', () => {
             if (this.isFullscreen) {
-                this.adjustPianoSize();
+                setTimeout(() => this.adjustPianoSize(), 100);
             }
         });
     }
@@ -375,13 +363,7 @@ class PianoPlayer {
 
         document.body.classList.add('fullscreen-mode');
         this.fullscreenPiano.classList.add('active');
-        
-        // 立即调整钢琴尺寸
-        setTimeout(() => {
-            this.adjustPianoSize();
-        }, 10);
-        
-        // 添加额外的调整以确保完全展开
+
         setTimeout(() => {
             this.adjustPianoSize();
         }, 100);
@@ -398,20 +380,15 @@ class PianoPlayer {
         if (whiteKeys.length === 0) return;
 
         const totalWhiteKeys = whiteKeys.length;
-        const newWhiteKeyWidth = Math.floor(containerWidth / totalWhiteKeys);
-        
-        // 确保最小宽度
-        const minWhiteKeyWidth = 20;
-        const maxWhiteKeyWidth = 100;
-        const finalWhiteKeyWidth = Math.max(minWhiteKeyWidth, Math.min(newWhiteKeyWidth, maxWhiteKeyWidth));
+        const newWhiteKeyWidth = Math.max(20, Math.floor(containerWidth / totalWhiteKeys));
 
         whiteKeys.forEach(key => {
-            key.style.width = `${finalWhiteKeyWidth}px`;
-            key.style.minWidth = `${finalWhiteKeyWidth}px`;
+            key.style.width = `${newWhiteKeyWidth}px`;
+            key.style.minWidth = `${newWhiteKeyWidth}px`;
         });
 
         const blackKeys = keyboard.querySelectorAll('.black.key');
-        const newBlackKeyWidth = Math.max(12, Math.floor(finalWhiteKeyWidth * 0.6));
+        const newBlackKeyWidth = Math.max(12, Math.floor(newWhiteKeyWidth * 0.6));
 
         blackKeys.forEach(key => {
             key.style.width = `${newBlackKeyWidth}px`;
@@ -421,82 +398,105 @@ class PianoPlayer {
         });
 
         const keyLabels = keyboard.querySelectorAll('.key-label');
-        const newFontSize = Math.max(8, Math.floor(finalWhiteKeyWidth * 0.3));
+        const newFontSize = Math.max(8, Math.floor(newWhiteKeyWidth * 0.4));
         keyLabels.forEach(label => {
             label.style.fontSize = `${newFontSize}px`;
         });
+    }
+
+    // 开始持续音符
+    startSustainedNote(noteName, velocity) {
+        if (this.sustainedNotes.has(noteName)) return;
         
-        // 确保键盘容器宽度填满
-        keyboard.style.width = '100%';
-        keyboard.style.overflow = 'hidden';
+        // 触发音符
+        this.sustainedNotes.set(noteName, true);
+        this.playPianoNote(noteName, 0, 0, null, velocity, true);
     }
 
-    // 开始播放音符（按住不放时持续播放）
-    async startPlayingNote(noteName, startTime) {
-        try {
-            await startAudioContext();
-            
-            // 高亮琴键
-            this.highlightKey(noteName, true);
-            
-            // 开始声音播放
-            this.sampler.triggerAttack(noteName, Tone.now(), this.noteBaseVelocity);
-            
-            // 创建钢琴雨
-            this.startRainEffect(noteName, startTime);
-        } catch (error) {
-            console.error("开始播放音符错误:", error);
-        }
-    }
-    
-    // 停止播放音符（松开琴键）
-    async stopPlayingNote(noteName, pressDuration) {
-        try {
-            await startAudioContext();
-            
-            // 停止声音播放
-            this.sampler.triggerRelease(noteName, Tone.now());
-            
-            // 停止钢琴雨生长
-            this.stopRainEffect(noteName, pressDuration);
-            
-            // 移除高亮
-            setTimeout(() => {
-                this.highlightKey(noteName, false);
-            }, 50);
-        } catch (error) {
-            console.error("停止播放音符错误:", error);
-        }
+    // 停止持续音符
+    stopSustainedNote(noteName) {
+        if (!this.sustainedNotes.has(noteName)) return;
+        
+        // 停止音符
+        this.sustainedNotes.delete(noteName);
+        this.releaseNote(noteName);
     }
 
-    // 播放单个音符（兼容原有接口）
-    async playPianoNote(noteName, duration = 0.8, sustain = 0, startTime = null, velocity = 1) {
+    // 开始为音符生成钢琴雨
+    startRainForNote(noteName) {
+        if (this.rainGenerators.has(noteName)) return;
+        
+        // 创建雨滴生成器
+        const generator = setInterval(() => {
+            if (this.sustainedNotes.has(noteName)) {
+                this.createRainEffect(noteName, 0, 0);
+            }
+        }, 50); // 每50ms生成一个雨滴
+        
+        this.rainGenerators.set(noteName, generator);
+    }
+
+    // 停止为音符生成钢琴雨
+    stopRainForNote(noteName) {
+        if (!this.rainGenerators.has(noteName)) return;
+        
+        // 停止生成器
+        clearInterval(this.rainGenerators.get(noteName));
+        this.rainGenerators.delete(noteName);
+    }
+
+    playPianoNote(noteName, duration = 0.8, sustain = 0, startTime = null, velocity = 1, sustainForever = false) {
         try {
-            const actualDuration = duration * this.noteBaseDuration;
-            
-            await playNote(noteName, actualDuration, sustain, startTime, velocity);
-            
-            this.highlightKey(noteName, true);
-            setTimeout(() => {
-                this.highlightKey(noteName, false);
-            }, actualDuration * 1000);
-            
-            this.createRainEffect(noteName, actualDuration, sustain);
+            if (sustainForever) {
+                // 持续发声，直到手动释放
+                const actualDuration = duration * this.noteBaseDuration;
+                this.playNoteForever(noteName, startTime, velocity);
+            } else {
+                const actualDuration = duration * this.noteBaseDuration;
+                this.playNote(noteName, actualDuration, sustain, startTime, velocity);
+                this.highlightKey(noteName, actualDuration);
+                this.createRainEffect(noteName, actualDuration, sustain);
+            }
         } catch (error) {
             console.error("播放音符错误:", error);
         }
     }
 
-    highlightKey(noteName, isPlaying) {
+    // 持续播放音符（不自动释放）
+    async playNoteForever(noteName, startTime = null, velocity = 1) {
+        await startAudioContext();
+        const now = startTime !== null ? startTime : Tone.now();
+        
+        // 触发攻击
+        globalSampler.triggerAttack(noteName, now, velocity);
+        
+        // 保存释放函数
+        this.activeNotes.set(noteName, {
+            release: () => {
+                globalSampler.triggerRelease(noteName, now);
+                this.activeNotes.delete(noteName);
+            },
+            velocity: velocity
+        });
+    }
+
+    // 释放音符
+    releaseNote(noteName) {
+        if (this.activeNotes.has(noteName)) {
+            const noteInfo = this.activeNotes.get(noteName);
+            noteInfo.release();
+        }
+    }
+
+    highlightKey(noteName, duration) {
         if (!this.fullscreenPianoKeyboard) return;
 
         const key = this.fullscreenPianoKeyboard.querySelector(`.key[data-note="${noteName}"]`);
         if (key) {
-            if (isPlaying) {
-                key.classList.add('playing');
-            } else {
+            key.classList.add('playing');
+            setTimeout(() => {
                 key.classList.remove('playing');
-            }
+            }, duration * 1000);
         }
     }
 
@@ -548,13 +548,7 @@ class PianoPlayer {
         return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
     }
 
-    // 创建固定时长的钢琴雨效果
     createRainEffect(noteName, duration, sustain = 0) {
-        this.startRainEffect(noteName, Date.now(), duration, sustain);
-    }
-    
-    // 开始钢琴雨效果（可动态生长）
-    startRainEffect(noteName, startTime, fixedDuration = null, sustain = 0) {
         if (!this.rainContainer || !this.fullscreenPianoKeyboard) return;
 
         const key = this.fullscreenPianoKeyboard.querySelector(`.key[data-note="${noteName}"]`);
@@ -563,19 +557,18 @@ class PianoPlayer {
         const keyRect = key.getBoundingClientRect();
         const containerRect = this.fullscreenPiano.getBoundingClientRect();
 
-        // 如果这个音符已经有一个雨滴，先停止它
-        if (this.activeRainElements.has(noteName)) {
-            const existingRain = this.activeRainElements.get(noteName);
-            if (existingRain.element && existingRain.element.parentNode) {
-                existingRain.element.parentNode.removeChild(existingRain.element);
-            }
-            this.activeRainElements.delete(noteName);
-        }
-
         const rainElement = document.createElement('div');
         rainElement.className = 'piano-rain';
 
         const color = this.getNoteColor(noteName);
+
+        const minHeight = 20;
+        const maxHeight = 500;
+        const totalDuration = duration + sustain;
+        const baseHeight = duration * 100 * this.noteBaseDuration;
+        const sustainHeight = sustain * 100 * this.noteBaseDuration;
+        const totalHeight = baseHeight + sustainHeight;
+        const maxHeightValue = Math.min(maxHeight, Math.max(minHeight, totalHeight));
 
         const startTop = keyRect.top - containerRect.top;
 
@@ -597,112 +590,106 @@ class PianoPlayer {
         const rainData = {
             element: rainElement,
             note: noteName,
-            startTime: startTime,
-            fixedDuration: fixedDuration,
+            duration: duration,
             sustain: sustain,
-            isGrowing: true,
-            currentHeight: 0,
+            startTime: Date.now(),
+            maxHeight: maxHeightValue,
+            baseHeight: Math.min(maxHeight, Math.max(minHeight, baseHeight)),
+            moveSpeed: this.rainDefaultSpeed * 100, // 初始速度，将在生长阶段结束后重新计算
             startTop: startTop,
             containerHeight: containerRect.height,
             keyRect: keyRect,
             containerRect: containerRect,
-            growSpeed: 200, // 像素/秒的生长速度
-            moveSpeed: 100, // 像素/秒的上移速度
-            lastUpdateTime: startTime
+            isGrowing: true,
+            isSustainPhase: false,
+            currentHeight: 0
         };
 
-        this.activeRainElements.set(noteName, rainData);
-        this.updateRainEffect(rainData);
+        this.activeRainElements.push(rainData);
+        this.startRainMovement(rainData);
     }
-    
-    // 停止钢琴雨生长
-    stopRainEffect(noteName, pressDuration) {
-        if (!this.activeRainElements.has(noteName)) return;
-        
-        const rainData = this.activeRainElements.get(noteName);
-        rainData.isGrowing = false;
-        
-        // 计算最终高度
-        const maxPressHeight = Math.min(1000, Math.max(20, pressDuration * rainData.growSpeed));
-        const finalHeight = Math.min(maxPressHeight, rainData.currentHeight);
-        rainData.finalHeight = finalHeight;
-        rainData.element.style.height = `${finalHeight}px`;
-        rainData.element.style.top = `${rainData.startTop - finalHeight}px`;
-        
-        // 继续上移动画
-        this.updateRainEffect(rainData);
-    }
-    
-    // 更新钢琴雨效果
-    updateRainEffect(rainData) {
-        if (!rainData.element.parentNode) {
-            this.activeRainElements.delete(rainData.note);
-            return;
-        }
 
-        const now = Date.now();
-        const elapsed = now - rainData.lastUpdateTime;
-        
-        if (elapsed <= 0) {
-            requestAnimationFrame(() => this.updateRainEffect(rainData));
-            return;
-        }
-        
-        const deltaTime = elapsed / 1000; // 转换为秒
-        rainData.lastUpdateTime = now;
-        
-        if (rainData.isGrowing) {
-            // 生长阶段
-            if (rainData.fixedDuration !== null) {
-                // 固定时长的生长
-                const totalDuration = rainData.fixedDuration + rainData.sustain;
-                const growProgress = Math.min(1, (now - rainData.startTime) / (totalDuration * 1000));
-                const targetHeight = 200 * growProgress; // 最大高度200像素
+    startRainMovement(rainData) {
+        const startTime = Date.now();
+        const growDuration = rainData.duration * 1000;
+        const sustainDuration = rainData.sustain * 1000;
+
+        const totalMoveDistance = rainData.containerHeight + rainData.maxHeight;
+        const totalMoveTime = (totalMoveDistance / rainData.moveSpeed) * 1000;
+
+        const animate = () => {
+            if (!rainData.element.parentNode) return;
+
+            const elapsed = Date.now() - startTime;
+
+            if (elapsed <= growDuration && rainData.isGrowing && !rainData.isSustainPhase) {
+                const growProgress = elapsed / growDuration;
+                const currentHeight = growProgress * rainData.baseHeight;
+
+                rainData.element.style.height = `${currentHeight}px`;
+                rainData.element.style.top = `${rainData.startTop - currentHeight}px`;
+
+                rainData.currentHeight = currentHeight;
+
+            } else if (elapsed <= (growDuration + sustainDuration) && !rainData.isSustainPhase) {
+                rainData.isSustainPhase = true;
+                rainData.sustainStartTime = Date.now();
+                rainData.sustainStartHeight = rainData.currentHeight;
                 
-                rainData.currentHeight = targetHeight;
-                rainData.element.style.height = `${targetHeight}px`;
-                rainData.element.style.top = `${rainData.startTop - targetHeight}px`;
+            } else if (rainData.isSustainPhase && elapsed <= (growDuration + sustainDuration)) {
+                const sustainProgress = (elapsed - growDuration) / sustainDuration;
+                const additionalHeight = sustainProgress * (rainData.maxHeight - rainData.baseHeight) * 0.3;
+                const currentHeight = rainData.baseHeight + additionalHeight;
                 
-                if (growProgress >= 1) {
-                    rainData.isGrowing = false;
-                    rainData.finalHeight = targetHeight;
-                }
-            } else {
-                // 持续生长（按住不放）
-                const heightIncrease = deltaTime * rainData.growSpeed;
-                rainData.currentHeight += heightIncrease;
-                rainData.element.style.height = `${rainData.currentHeight}px`;
-                rainData.element.style.top = `${rainData.startTop - rainData.currentHeight}px`;
+                rainData.element.style.height = `${currentHeight}px`;
+                rainData.element.style.top = `${rainData.startTop - currentHeight}px`;
+                
+                rainData.currentHeight = currentHeight;
+                
+            } else if (rainData.isGrowing) {
+                // 生长阶段结束，计算平均生长速度并设置为上移速度
+                const totalGrowthTime = growDuration + sustainDuration;
+                const averageSpeed = (rainData.currentHeight / totalGrowthTime) * 1000; // 像素/秒
+                rainData.moveSpeed = averageSpeed;
+                
+                rainData.isGrowing = false;
+                rainData.growEndTime = Date.now();
+                rainData.finalHeight = rainData.currentHeight;
+                rainData.growEndTop = parseFloat(rainData.element.style.top) || rainData.startTop;
             }
-        } else {
-            // 上移阶段
-            const moveDistance = deltaTime * rainData.moveSpeed;
+
+            if (!rainData.isGrowing) {
+                const moveElapsed = Date.now() - rainData.growEndTime;
+                const moveDistance = (moveElapsed / 1000) * rainData.moveSpeed;
+
+                rainData.element.style.top = `${rainData.growEndTop - moveDistance}px`;
+                // 保持雨滴高度不变
+                rainData.element.style.height = `${rainData.finalHeight}px`;
+            }
+
             const currentTop = parseFloat(rainData.element.style.top) || rainData.startTop;
-            const newTop = currentTop - moveDistance;
-            
-            rainData.element.style.top = `${newTop}px`;
-            
-            // 检查是否完全移出容器
-            const elementBottom = newTop + rainData.currentHeight;
-            if (elementBottom < 0) {
-                // 完全移出，移除元素
+            // 修改移除条件：当雨滴完全移出屏幕顶部时移除
+            if (currentTop < -parseFloat(rainData.element.style.height)) {
                 if (rainData.element.parentNode) {
                     rainData.element.parentNode.removeChild(rainData.element);
                 }
-                this.activeRainElements.delete(rainData.note);
-                return;
+                const index = this.activeRainElements.indexOf(rainData);
+                if (index > -1) {
+                    this.activeRainElements.splice(index, 1);
+                }
+            } else {
+                requestAnimationFrame(animate);
             }
-        }
-        
-        // 继续动画
-        requestAnimationFrame(() => this.updateRainEffect(rainData));
+        };
+
+        requestAnimationFrame(animate);
     }
 
     clearRainEffects() {
         if (this.rainContainer) {
             this.rainContainer.innerHTML = '';
         }
-        this.activeRainElements.clear();
+        this.activeRainElements = [];
     }
 
     clearKeyboardHighlights() {
@@ -1161,7 +1148,6 @@ document.addEventListener('DOMContentLoaded', function () {
             const convertedSequence = sessionStorage.getItem('convertedAbsoluteSequence');
             const defaultNoteDuration = sessionStorage.getItem('defaultNoteDuration');
             const defaultNoteVelocity = sessionStorage.getItem('defaultNoteVelocity');
-            const infoElement = document.getElementById('conversionInfo');
 
             if (convertedSequence) {
                 // 设置默认参数
@@ -1193,9 +1179,5 @@ document.addEventListener('DOMContentLoaded', function () {
         console.error("音源加载失败:", error);
         hideLoadingPage();
         document.querySelector('.container').style.display = 'block';
-        if (document.getElementById('conversionInfo')) {
-            document.getElementById('conversionInfo').innerHTML = 
-                "音源加载失败，钢琴功能可能无法正常使用。请刷新页面重试。";
-        }
     });
 });
