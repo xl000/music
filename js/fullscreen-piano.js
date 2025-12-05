@@ -187,7 +187,7 @@ const blackKeys = ["C#", "D#", "F#", "G#", "A#"];
 let noteDuration = 0.8;
 
 // 创建钢琴键盘
-function createPiano(pianoElement) {
+function createPiano(pianoElement, pianoPlayer) {
     if (!pianoElement) return;
 
     pianoElement.innerHTML = '';
@@ -220,32 +220,23 @@ function createPiano(pianoElement) {
             label.textContent = fullNote;
             key.appendChild(label);
 
-            // 点击琴键事件
-            key.addEventListener('click', async () => {
-                try {
-                    await startAudioContext();
-
-                    key.classList.add('playing');
-                    setTimeout(() => key.classList.remove('playing'), 300);
-                    globalSampler.triggerAttackRelease(fullNote, noteDuration);
-                } catch (error) {
-                    console.error("播放错误:", error);
-                }
-            });
-
-            // 触摸事件支持
-            key.addEventListener('touchstart', async (e) => {
+            // 琴键按下事件处理函数
+            const handleKeyPress = async (e) => {
                 e.preventDefault();
                 try {
                     await startAudioContext();
-
-                    key.classList.add('playing');
-                    setTimeout(() => key.classList.remove('playing'), 300);
-                    globalSampler.triggerAttackRelease(fullNote, noteDuration);
+                    // 立即播放音符并生成钢琴雨
+                    pianoPlayer.playPianoNote(fullNote, pianoPlayer.noteBaseDuration, 0, null, 1);
                 } catch (error) {
                     console.error("播放错误:", error);
                 }
-            });
+            };
+
+            // 鼠标按下事件
+            key.addEventListener('mousedown', handleKeyPress);
+            
+            // 触摸事件支持
+            key.addEventListener('touchstart', handleKeyPress);
 
             pianoElement.appendChild(key);
         }
@@ -340,7 +331,7 @@ class PianoPlayer {
     }
 
     initPiano() {
-        createPiano(this.fullscreenPianoKeyboard);
+        createPiano(this.fullscreenPianoKeyboard, this);
     }
 
     showFullscreenPiano() {
@@ -485,8 +476,6 @@ class PianoPlayer {
         const totalHeight = baseHeight + sustainHeight;
         const maxHeightValue = Math.min(maxHeight, Math.max(minHeight, totalHeight));
 
-        const moveSpeed = this.rainDefaultSpeed * 100;
-
         const startTop = keyRect.top - containerRect.top;
 
         rainElement.style.cssText = `
@@ -512,7 +501,7 @@ class PianoPlayer {
             startTime: Date.now(),
             maxHeight: maxHeightValue,
             baseHeight: Math.min(maxHeight, Math.max(minHeight, baseHeight)),
-            moveSpeed: moveSpeed,
+            moveSpeed: this.rainDefaultSpeed * 100, // 初始速度，将在生长阶段结束后重新计算
             startTop: startTop,
             containerHeight: containerRect.height,
             keyRect: keyRect,
@@ -564,6 +553,11 @@ class PianoPlayer {
                 rainData.currentHeight = currentHeight;
                 
             } else if (rainData.isGrowing) {
+                // 生长阶段结束，计算平均生长速度并设置为上移速度
+                const totalGrowthTime = growDuration + sustainDuration;
+                const averageSpeed = (rainData.currentHeight / totalGrowthTime) * 1000; // 像素/秒
+                rainData.moveSpeed = averageSpeed;
+                
                 rainData.isGrowing = false;
                 rainData.growEndTime = Date.now();
                 rainData.finalHeight = rainData.currentHeight;
@@ -1061,10 +1055,6 @@ document.addEventListener('DOMContentLoaded', function () {
             const infoElement = document.getElementById('conversionInfo');
 
             if (convertedSequence) {
-                if (infoElement) {
-                    infoElement.innerHTML = `检测到转换序列<br>正在准备播放...`;
-                }
-
                 // 设置默认参数
                 if (defaultNoteDuration) {
                     window.pianoPlayer.noteBaseDuration = parseFloat(defaultNoteDuration);
