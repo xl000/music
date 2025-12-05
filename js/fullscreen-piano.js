@@ -259,19 +259,25 @@ function createPiano(pianoElement) {
     }
 }
 
-// 播放钢琴音符
-async function playNote(noteName, duration = 0.8, startTime = null) {
+// 播放钢琴音符（增强版，支持延音）
+async function playNote(noteName, duration = 0.8, sustain = 0, startTime = null, velocity = 1) {
     try {
         await startAudioContext(); // 确保音频上下文已启动
 
+        // 计算实际持续时间 = 基本持续时间 + 延音
+        const actualDuration = duration + sustain;
+        
         // 修复：使用传入的startTime而不是Tone.now()
         const now = startTime !== null ? startTime : Tone.now();
-        globalSampler.triggerAttackRelease(noteName, duration, now);
+        
+        // 使用triggerAttackRelease播放音符，总持续时间为duration + sustain
+        globalSampler.triggerAttackRelease(noteName, actualDuration, now, velocity);
 
         // 高亮琴键
         const key = document.querySelector(`.fullscreen-piano-keyboard .key[data-note="${noteName}"]`);
         if (key) {
             key.classList.add('playing');
+            // 高亮持续时间为基础持续时间，不包括延音
             setTimeout(() => {
                 key.classList.remove('playing');
             }, duration * 1000);
@@ -322,14 +328,14 @@ class PianoPlayer {
     initUI() {
         this.fullscreenPiano = document.getElementById('fullscreenPiano');
         this.fullscreenPianoKeyboard = document.getElementById('fullscreenPianoKeyboard');
-        this.fullscreenPlaybackInfo = document.getElementById('fullscreenPlaybackInfo');
+        // 修复：不再尝试获取不存在的播放信息元素
+        // this.fullscreenPlaybackInfo = document.getElementById('fullscreenPlaybackInfo');
 
         this.initPiano();
         this.createRainContainer();
     }
 
     setupEventListeners() {
-
         // 窗口大小改变时重新调整钢琴大小
         window.addEventListener('resize', () => {
             if (this.isFullscreen) {
@@ -357,13 +363,6 @@ class PianoPlayer {
         setTimeout(() => {
             this.adjustPianoSize();
         }, 100);
-    }
-
-    collapseFullscreen() {
-        this.isFullscreen = false;
-        document.body.classList.remove('fullscreen-mode');
-        this.fullscreenPiano.classList.remove('active');
-        this.stop();
     }
 
     adjustPianoSize() {
@@ -401,16 +400,20 @@ class PianoPlayer {
         });
     }
 
-    // 播放单个音符
-    async playPianoNote(noteName, duration = 0.8, startTime = null, velocity = 1) {
+    // 播放单个音符（增强版，支持延音）
+    async playPianoNote(noteName, duration = 0.8, sustain = 0, startTime = null, velocity = 1) {
         try {
-            let actualDuration = duration * this.noteBaseDuration;
-
-            await playNote(noteName, actualDuration, startTime);
+            // 计算实际持续时间
+            const actualDuration = duration * this.noteBaseDuration;
+            
+            // 播放音符，传入延音参数
+            await playNote(noteName, actualDuration, sustain, startTime, velocity);
+            
+            // 高亮琴键（基础持续时间，不包括延音）
             this.highlightKey(noteName, actualDuration);
 
-            // 创建钢琴雨效果
-            this.createRainEffect(noteName, actualDuration);
+            // 创建钢琴雨效果，传入延音信息
+            this.createRainEffect(noteName, actualDuration, sustain);
         } catch (error) {
             console.error("播放音符错误:", error);
         }
@@ -428,7 +431,7 @@ class PianoPlayer {
         }
     }
 
-    // 同时播放多个音符
+    // 同时播放多个音符（增强版，支持延音）
     async playNotesSimultaneously(notes, startTime = null) {
         if (!notes || notes.length === 0) return;
 
@@ -441,10 +444,13 @@ class PianoPlayer {
             const playPromises = notes.map(note => {
                 let duration = Math.min(note.duration || 0.8, 2);
                 const velocity = note.velocity || 1;
+                const sustain = note.sustain || 0; // 获取延音参数
 
-                this.createRainEffect(note.note || note, duration, note);
+                // 创建钢琴雨效果，传入延音信息
+                this.createRainEffect(note.note || note, duration, sustain);
 
-                return this.playPianoNote(note.note || note, duration, actualStartTime, velocity);
+                // 播放音符，传入延音参数
+                return this.playPianoNote(note.note || note, duration, sustain, actualStartTime, velocity);
             });
 
             await Promise.all(playPromises);
@@ -477,7 +483,7 @@ class PianoPlayer {
         return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
     }
 
-    createRainEffect(noteName, duration, note) {
+    createRainEffect(noteName, duration, sustain = 0) {
         if (!this.rainContainer || !this.fullscreenPianoKeyboard) return;
 
         const key = this.fullscreenPianoKeyboard.querySelector(`.key[data-note="${noteName}"]`);
@@ -491,10 +497,14 @@ class PianoPlayer {
 
         const color = this.getNoteColor(noteName);
 
+        // 计算雨滴高度，考虑延音效果
         const minHeight = 20;
         const maxHeight = 500;
+        const totalDuration = duration + sustain; // 总持续时间 = 基础持续时间 + 延音
         const baseHeight = duration * 100 * this.noteBaseDuration;
-        const maxHeightValue = Math.min(maxHeight, Math.max(minHeight, baseHeight));
+        const sustainHeight = sustain * 100 * this.noteBaseDuration; // 延音部分的高度
+        const totalHeight = baseHeight + sustainHeight; // 总高度
+        const maxHeightValue = Math.min(maxHeight, Math.max(minHeight, totalHeight));
 
         const moveSpeed = this.rainDefaultSpeed * 100;
 
@@ -517,16 +527,19 @@ class PianoPlayer {
 
         const rainData = {
             element: rainElement,
-            note: note,
+            note: noteName,
             duration: duration,
+            sustain: sustain,
             startTime: Date.now(),
             maxHeight: maxHeightValue,
+            baseHeight: Math.min(maxHeight, Math.max(minHeight, baseHeight)),
             moveSpeed: moveSpeed,
             startTop: startTop,
             containerHeight: containerRect.height,
             keyRect: keyRect,
             containerRect: containerRect,
             isGrowing: true,
+            isSustainPhase: false,
             currentHeight: 0
         };
 
@@ -536,7 +549,8 @@ class PianoPlayer {
 
     startRainMovement(rainData) {
         const startTime = Date.now();
-        const growDuration = rainData.duration * 1000;
+        const growDuration = rainData.duration * 1000; // 基础部分增长时间
+        const sustainDuration = rainData.sustain * 1000; // 延音部分时间
 
         const totalMoveDistance = rainData.containerHeight + rainData.maxHeight;
         const totalMoveTime = (totalMoveDistance / rainData.moveSpeed) * 1000;
@@ -546,16 +560,36 @@ class PianoPlayer {
 
             const elapsed = Date.now() - startTime;
 
-            if (elapsed <= growDuration && rainData.isGrowing) {
+            if (elapsed <= growDuration && rainData.isGrowing && !rainData.isSustainPhase) {
+                // 基础增长阶段
                 const growProgress = elapsed / growDuration;
-                const currentHeight = growProgress * rainData.maxHeight;
+                const currentHeight = growProgress * rainData.baseHeight;
 
                 rainData.element.style.height = `${currentHeight}px`;
                 rainData.element.style.top = `${rainData.startTop - currentHeight}px`;
 
                 rainData.currentHeight = currentHeight;
 
+            } else if (elapsed <= (growDuration + sustainDuration) && !rainData.isSustainPhase) {
+                // 进入延音阶段
+                rainData.isSustainPhase = true;
+                rainData.sustainStartTime = Date.now();
+                rainData.sustainStartHeight = rainData.currentHeight;
+                
+            } else if (rainData.isSustainPhase && elapsed <= (growDuration + sustainDuration)) {
+                // 延音阶段保持高度
+                const sustainProgress = (elapsed - growDuration) / sustainDuration;
+                // 延音阶段可以稍微增加高度
+                const additionalHeight = sustainProgress * (rainData.maxHeight - rainData.baseHeight) * 0.3;
+                const currentHeight = rainData.baseHeight + additionalHeight;
+                
+                rainData.element.style.height = `${currentHeight}px`;
+                rainData.element.style.top = `${rainData.startTop - currentHeight}px`;
+                
+                rainData.currentHeight = currentHeight;
+                
             } else if (rainData.isGrowing) {
+                // 增长结束，开始下落
                 rainData.isGrowing = false;
                 rainData.growEndTime = Date.now();
                 rainData.finalHeight = rainData.currentHeight;
@@ -563,6 +597,7 @@ class PianoPlayer {
             }
 
             if (!rainData.isGrowing) {
+                // 下落阶段
                 const moveElapsed = Date.now() - rainData.growEndTime;
                 const moveDistance = (moveElapsed / 1000) * rainData.moveSpeed;
 
@@ -571,7 +606,7 @@ class PianoPlayer {
             }
 
             const currentTop = parseFloat(rainData.element.style.top) || rainData.startTop;
-            if (currentTop > -rainData.maxHeight && elapsed < (growDuration + totalMoveTime)) {
+            if (currentTop > -rainData.maxHeight && elapsed < (growDuration + sustainDuration + totalMoveTime)) {
                 requestAnimationFrame(animate);
             } else {
                 if (rainData.element.parentNode) {
@@ -600,6 +635,12 @@ class PianoPlayer {
         keys.forEach(key => {
             key.classList.remove('playing');
         });
+    }
+
+    // 修复：移除不存在的播放信息更新
+    updatePlaybackInfo(currentIndex, totalItems, title) {
+        // 由于HTML中移除了播放信息元素，这里只记录到控制台
+        console.log(`播放中: ${title} (${currentIndex + 1}/${totalItems})`);
     }
 
     // 播放序列（供外部调用）
@@ -639,32 +680,30 @@ class PianoPlayer {
         this.clearRainEffects();
         this.clearKeyboardHighlights();
 
-        // 按时间分组音符
-        const timeGroups = this.groupNotesByTime(sequence);
-
-        timeGroups.forEach((group, index) => {
+        // 安排播放事件
+        sequence.forEach((item, index) => {
             const eventId = Tone.Transport.schedule((time) => {
                 if (!this.isPlaying) return;
 
-                if (group.notes.length > 1) {
-                    // 播放和弦 - 修复：使用传入的time参数
-                    this.playNotesSimultaneously(group.notes, time);
-                } else {
-                    // 播放单音 - 修复：使用传入的time参数
-                    this.playPianoNote(group.notes[0].note || group.notes[0],
-                        group.duration || 0.8, time);
+                if (item.isChord && item.notes) {
+                    // 播放和弦
+                    this.playNotesSimultaneously(item.notes, time);
+                } else if (item.notes && item.notes.length > 0) {
+                    // 播放单音
+                    const note = item.notes[0];
+                    this.playPianoNote(note.note, note.duration, note.sustain, time, note.velocity);
                 }
 
                 this.currentTimeIndex = index;
-                this.updatePlaybackInfo(index, timeGroups.length, title);
+                this.updatePlaybackInfo(index, sequence.length, title);
 
-            }, group.time);
+            }, item.time);
             this.scheduledEvents.push(eventId);
         });
 
-        const totalDuration = sequence.length > 0 ? 
-            sequence[sequence.length - 1].time + (sequence[sequence.length - 1].duration || 0.8) + 0.5 : 0;
-            
+        const totalDuration = sequence.length > 0 ?
+            sequence[sequence.length - 1].time + sequence[sequence.length - 1].duration + 0.5 : 0;
+
         const endEventId = Tone.Transport.schedule(() => {
             this.stop();
         }, totalDuration);
@@ -672,7 +711,7 @@ class PianoPlayer {
 
         Tone.Transport.start();
         this.playbackStartTime = Tone.now();
-        this.updatePlaybackInfo(0, timeGroups.length, title);
+        this.updatePlaybackInfo(0, sequence.length, title);
     }
 
     // 按时间分组音符
@@ -723,11 +762,6 @@ class PianoPlayer {
         return groups;
     }
 
-    updatePlaybackInfo(currentIndex, totalItems, title) {
-        this.fullscreenPlaybackInfo.textContent =
-            `播放中: ${title} (${currentIndex + 1}/${totalItems})`;
-    }
-
     resumePlayback() {
         if (!this.isPaused) return;
 
@@ -771,7 +805,7 @@ class PianoPlayer {
         this.clearKeyboardHighlights();
         this.clearRainEffects();
 
-        this.fullscreenPlaybackInfo.textContent = `播放已停止`;
+        console.log("播放已停止");
     }
 }
 
@@ -930,100 +964,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 time: startTime
             };
         }
-
-        // 修改PianoPlayer类的playSequence方法，支持新的序列格式
-        PianoPlayer.prototype.playSequence = async function (sequence, title = "自定义序列") {
-            try {
-                await startAudioContext(); // 确保音频上下文已启动
-                this.startPlayback(sequence, title);
-            } catch (error) {
-                console.error("启动音频上下文失败:", error);
-            }
-        };
-
-        // 修改startPlayback方法以支持新的序列格式
-        PianoPlayer.prototype.startPlayback = function (sequence, title) {
-            if (this.isPlaying && !this.isPaused) return;
-
-            if (this.isPaused) {
-                this.resumePlayback();
-                return;
-            }
-
-            this.isPlaying = true;
-            this.isPaused = false;
-            this.currentTimeIndex = 0;
-            this.pausedTime = 0;
-
-            if (this.playbackSchedule) {
-                this.playbackSchedule.stop();
-                this.playbackSchedule = null;
-            }
-
-            if (this.scheduledEvents.length) {
-                this.scheduledEvents.forEach(id => Tone.Transport.clear(id));
-                this.scheduledEvents = [];
-            }
-
-            this.clearRainEffects();
-            this.clearKeyboardHighlights();
-
-            // 安排播放事件
-            sequence.forEach((item, index) => {
-                const eventId = Tone.Transport.schedule((time) => {
-                    if (!this.isPlaying) return;
-
-                    if (item.isChord && item.notes) {
-                        // 播放和弦 - 修复：使用传入的time参数
-                        this.playNotesSimultaneously(item.notes, time);
-                    } else if (item.notes && item.notes.length > 0) {
-                        // 播放单音 - 修复：使用传入的time参数
-                        const note = item.notes[0];
-                        this.playPianoNote(note.note, note.duration, time, note.velocity);
-                    }
-
-                    this.currentTimeIndex = index;
-                    this.updatePlaybackInfo(index, sequence.length, title);
-
-                }, item.time);
-                this.scheduledEvents.push(eventId);
-            });
-
-            const totalDuration = sequence.length > 0 ?
-                sequence[sequence.length - 1].time + sequence[sequence.length - 1].duration + 0.5 : 0;
-
-            const endEventId = Tone.Transport.schedule(() => {
-                this.stop();
-            }, totalDuration);
-            this.scheduledEvents.push(endEventId);
-
-            Tone.Transport.start();
-            this.playbackStartTime = Tone.now();
-            this.updatePlaybackInfo(0, sequence.length, title);
-        };
-
-        // 修改playNotesSimultaneously方法以支持新的音符格式
-        PianoPlayer.prototype.playNotesSimultaneously = async function (notes, startTime = null) {
-            if (!notes || notes.length === 0) return;
-
-            try {
-                await startAudioContext(); // 确保音频上下文已启动
-
-                // 修复：使用传入的startTime而不是Tone.now()
-                const actualStartTime = startTime !== null ? startTime : Tone.now() + 0.1;
-                const playPromises = notes.map(note => {
-                    let duration = Math.min(note.duration || 0.8, 2);
-                    const velocity = note.velocity || 1;
-
-                    this.createRainEffect(note.note, duration, note);
-                    return this.playPianoNote(note.note, duration, actualStartTime, velocity);
-                });
-
-                await Promise.all(playPromises);
-            } catch (error) {
-                console.error("播放和弦错误:", error);
-            }
-        };
 
         // 页面加载完成后检查并播放序列
         setTimeout(() => {
