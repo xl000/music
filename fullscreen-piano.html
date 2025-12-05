@@ -107,22 +107,8 @@
         </div>
     </div>
 
-    <!-- 主页面内容 -->
-    <div class="container">
-        <h1>全屏钢琴 - 特效点播</h1>
-        <div class="description" id="conversionInfo">
-            准备播放转换后的序列...
-        </div>
-        <div class="footer">
-            全屏钢琴 | 基于 pure-piano.js
-        </div>
-    </div>
-
     <!-- 全屏钢琴容器 -->
     <div id="fullscreenPiano" class="fullscreen-piano">
-        <div class="fullscreen-piano-header">
-            <button id="collapsePiano" class="collapse-btn">收起钢琴</button>
-        </div>
         <div class="fullscreen-piano-content">
             <div class="fullscreen-playback-info" id="fullscreenPlaybackInfo">
                 准备播放...
@@ -463,15 +449,12 @@
                 this.fullscreenPiano = document.getElementById('fullscreenPiano');
                 this.fullscreenPianoKeyboard = document.getElementById('fullscreenPianoKeyboard');
                 this.fullscreenPlaybackInfo = document.getElementById('fullscreenPlaybackInfo');
-                this.collapseBtn = document.getElementById('collapsePiano');
 
                 this.initPiano();
                 this.createRainContainer();
             }
 
             setupEventListeners() {
-                // 收起按钮
-                this.collapseBtn.addEventListener('click', () => this.collapseFullscreen());
 
                 // 窗口大小改变时重新调整钢琴大小
                 window.addEventListener('resize', () => {
